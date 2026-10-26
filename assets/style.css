@@ -50,12 +50,6 @@
   --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
-@view-transition { navigation: auto; }
-::view-transition-old(root) { animation: 220ms var(--ease-out) both vt-out; }
-::view-transition-new(root) { animation: 360ms var(--ease-out) both vt-in; }
-@keyframes vt-out { to { opacity: 0; } }
-@keyframes vt-in { from { opacity: 0; } }
-
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; color-scheme: light; }
 body {
@@ -521,13 +515,6 @@ h1, h2, h3 { text-wrap: balance; }
 .copy:active { transform: scale(0.97); }
 .copy.done { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-/* page transitions: the nav stays put, content lifts out and settles in */
-.nav { view-transition-name: site-nav; }
-::view-transition-group(site-nav) { animation: none; }
-::view-transition-old(root) { animation: 260ms var(--ease-exit, cubic-bezier(0.55,0.055,0.675,0.19)) both vt-lift-out; }
-::view-transition-new(root) { animation: 520ms var(--ease-expo) both vt-settle-in; }
-@keyframes vt-lift-out { to { opacity: 0; transform: translateY(-14px); } }
-@keyframes vt-settle-in { from { opacity: 0; transform: translateY(22px); } }
 .soon-wide h2 { grid-column: 1 / -1; }
 .soon-wide p:last-child { grid-column: 1 / 7; margin-top: 28px; }
 @media (max-width: 860px) { .soon-wide p:last-child { grid-column: 1 / -1; } }
@@ -688,7 +675,6 @@ dl.facts dd { margin: 0; }
 .js [data-in="soft"].in img { scale: 1; }
 .page-head h1.play .g { animation-duration: 1100ms; animation-delay: calc(var(--i) * 36ms + 120ms); }
 @keyframes rise { from { opacity: 0; transform: translateY(0.1em); } to { opacity: 1; transform: none; } }
-::view-transition-new(root) { animation-duration: 700ms; }
 
 /* ---------- round 11 ---------- */
 /* hero: the study line gets its own, more readable line */
@@ -730,13 +716,12 @@ dl.facts dd { margin: 0; }
 /* ---------- round 14: no shake on load ---------- */
 /* the page waits for its font (see the head script), then fades in once */
 html.loading body { opacity: 0; }
-body { transition: opacity 500ms var(--ease-out); }
 html { scrollbar-gutter: stable; }
-/* page changes: a plain cross-fade, nothing moves */
-::view-transition-old(root) { animation: 300ms var(--ease-out) both vt-fade-out; }
-::view-transition-new(root) { animation: 500ms var(--ease-out) both vt-fade-in; }
-@keyframes vt-fade-out { to { opacity: 0; } }
-@keyframes vt-fade-in { from { opacity: 0; } }
+/* page changes: the new page fades in, nothing moves. This replaces a
+   cross-document view transition, which in Safari ends on one blank frame
+   and made every click look like a jolt */
+html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
+@keyframes page-in { from { opacity: 0; } }
 
 /* ---------- round 15: entrances fade in place, nothing travels ---------- */
 /* when many elements rose 14–18px at once, the whole page appeared to jolt */
@@ -750,7 +735,6 @@ html { scrollbar-gutter: stable; }
 .js [data-in="soft"] img, .js [data-in="soft"].in img { scale: 1; }
 .js .page-head h1 .g { transform: none; }
 @keyframes rise { from { opacity: 0; } to { opacity: 1; } }
-.nav { view-transition-name: none; }
 
 /* ---------- round 16: the about photo settles in again ---------- */
 .js [data-in="soft"] img { scale: 1.06; transition: scale 2800ms var(--ease-expo); }
@@ -771,3 +755,12 @@ html { scrollbar-gutter: stable; }
 /* once everything has arrived, hand the text back to normal rendering */
 .js .hero.settled .hero-study, .js .hero.settled .hero-sub, .js .hero.settled .actions, .js .hero.settled .socials li { will-change: auto; }
 .hero-tile { contain: paint; }
+
+/* ---------- round 18: smoother in Safari and on phones ---------- */
+/* blurred, moving glyphs get their own GPU layer before they start, so the
+   blur is composited instead of repainted every frame; released once settled */
+.js .name .g, .rot-word { will-change: opacity, transform, filter; }
+.js .hero.settled .name .g { will-change: auto; }
+.js .page-head h1:not(.done) .g { will-change: opacity; }
+/* counting digits keep one width, so the number does not wobble sideways */
+[data-count] { font-variant-numeric: tabular-nums; }

@@ -53,7 +53,8 @@ function addGlyph(parent, ch, i, cls = "g") {
 
 const pageTitle = document.querySelector(".page-head h1");
 if (pageTitle) {
-  split(pageTitle);
+  const titleGlyphs = split(pageTitle);
+  titleGlyphs.at(-1).addEventListener("animationend", () => pageTitle.classList.add("done"), { once: true });
   whenShown(() => requestAnimationFrame(() => pageTitle.classList.add("play")));
 }
 
@@ -169,11 +170,22 @@ if (hero) {
       }
       lastT = loop.currentTime;
     };
+    const startLoop = () => loop.play().then(() => tile.classList.add("looping"));
     const toLoop = () => {
       loop.currentTime = 0;
       loop.playbackRate = FIRST_RATE;
       loop.addEventListener("timeupdate", onWrap);
-      loop.play().then(() => tile.classList.add("looping")).catch(() => (video.poster = video.dataset.still));
+      startLoop().catch(() => {
+        // autoplay refused (an iPhone in Low Power Mode, for one): hold the
+        // sharp end frame and start the loop on the first tap, which is always allowed
+        video.poster = video.dataset.still;
+        const gestures = ["touchend", "click", "keydown"];
+        const go = () => {
+          gestures.forEach((t) => removeEventListener(t, go));
+          startLoop().catch(console.error);
+        };
+        gestures.forEach((t) => addEventListener(t, go, { passive: true }));
+      });
     };
     video.addEventListener("ended", toLoop, { once: true });
 
@@ -229,16 +241,23 @@ if (counters.length && !reduced) {
     const el = e.target;
     const target = parseFloat(el.dataset.count);
     const digits = (el.dataset.count.split(".")[1] || "").length;
-    const t0 = performance.now();
-    const step = (now) => {
-      const p = Math.min(1, (now - t0) / 1400);
-      const eased = 1 - Math.pow(1 - p, 4);
-      el.textContent = (target * eased).toFixed(digits);
-      if (p < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+    // count while the number is actually visible: start once its block's
+    // staggered fade-in begins, not while it is still transparent
+    const box = el.closest("[data-in]");
+    const delay = box ? parseFloat(getComputedStyle(box).transitionDelay) * 1000 : 0;
+    setTimeout(() => {
+      const t0 = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / 1400);
+        const eased = 1 - Math.pow(1 - p, 4);
+        el.textContent = (target * eased).toFixed(digits);
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, delay);
   }), { rootMargin: "0px 0px -15% 0px" });
-  counters.forEach((el) => { el.textContent = (0).toFixed((el.dataset.count.split(".")[1] || "").length); cio.observe(el); });
+  counters.forEach((el) => (el.textContent = (0).toFixed((el.dataset.count.split(".")[1] || "").length)));
+  whenShown(() => counters.forEach((el) => cio.observe(el)));
 }
 
 /* ---------- project cards tilt toward the pointer ---------- */
