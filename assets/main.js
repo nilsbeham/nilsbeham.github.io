@@ -189,6 +189,31 @@ if (hero) {
     };
     video.addEventListener("ended", toLoop, { once: true });
 
+    // iPhones in Low Power Mode refuse every video, but Safari also plays an
+    // mp4 inside <img> like an animated image, which no autoplay rule covers;
+    // the intro runs once that way, then the loop takes over on its last frame
+    const loadImg = async (src) => {
+      const img = new Image();
+      img.className = "v-img";
+      img.alt = "";
+      img.setAttribute("aria-hidden", "true");
+      img.src = src;
+      // rejects where a browser cannot show mp4 as an image (all but Safari)
+      await img.decode();
+      return img;
+    };
+    const playAsImages = async () => {
+      const intro = await loadImg(video.querySelector("source").src);
+      const next = loadImg(loop.querySelector("source").src);
+      tile.appendChild(intro);
+      // swap just before the intro ends: a late swap would flash its first,
+      // blurred frame again as the image repeats
+      const [loopImg] = await Promise.all([next, wait(6600 - 70)]);
+      tile.appendChild(loopImg);
+      // the intro stays underneath until the loop has surely painted
+      setTimeout(() => intro.remove(), 300);
+    };
+
     // slight parallax: the video drifts against the pointer
     // the loop only runs while the pointer moves or the video is settling back,
     // so it costs nothing during the page's entrance
@@ -220,7 +245,7 @@ if (hero) {
       await wait(700);
       await typeName();
       await wait(250);
-      video.play().catch(toLoop);
+      video.play().catch(() => playAsImages().catch(toLoop));
       roleCaret.style.opacity = "1";
       // give the video decoder a moment before the column starts fading in
       await wait(700);

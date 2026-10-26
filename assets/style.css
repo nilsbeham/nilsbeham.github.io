@@ -147,7 +147,7 @@ h1, h2, h3 { text-wrap: balance; }
   padding: 120px var(--m) clamp(48px, 9vh, 112px);
 }
 .hero-tile { position: relative; background: var(--tile); overflow: hidden; }
-.hero-tile video {
+.hero-tile video, .hero-tile .v-img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%;
   translate: var(--tx, 0) var(--ty, 0);
   scale: 1.06;
@@ -199,7 +199,7 @@ h1, h2, h3 { text-wrap: balance; }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; min-height: 0; }
   .hero-tile { order: -1; aspect-ratio: 4 / 5; max-height: 62svh; width: 100%; }
-  .hero-tile video { object-position: 50% 20%; }
+  .hero-tile video, .hero-tile .v-img { object-position: 50% 20%; }
   .hero-text { padding: 36px var(--m) 72px; }
 }
 
@@ -708,7 +708,7 @@ dl.facts dd { margin: 0; }
 
 /* ---------- round 13 ---------- */
 /* full-resolution video: zoom only as much as the pointer parallax needs */
-.hero-tile video { scale: 1.02; animation-name: tile-drift-soft; }
+.hero-tile video, .hero-tile .v-img { scale: 1.02; animation-name: tile-drift-soft; }
 @keyframes tile-drift-soft { from { scale: 1.02; } to { scale: 1.05; } }
 /* interest words carry more weight */
 .rotate { font-weight: 700; letter-spacing: -0.01em; }
@@ -764,3 +764,4 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 .js .page-head h1:not(.done) .g { will-change: opacity; }
 /* counting digits keep one width, so the number does not wobble sideways */
 [data-count] { font-variant-numeric: tabular-nums; }
+.hero-tile .v-img { z-index: 2; }
