@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About Nils Beham</title>
+<meta name="description" content="Nils Beham grew up in Austria, served as a paramedic, and studies Physics and Management and Technology at the Technical University of Munich.">
+<meta name="author" content="Nils Beham">
+<meta name="theme-color" content="#f1f2ef">
+<meta property="og:type" content="website">
+<meta property="og:title" content="About Nils Beham">
+<meta property="og:description" content="Nils Beham grew up in Austria, served as a paramedic, and studies Physics and Management and Technology at the Technical University of Munich.">
+<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<link rel="icon" href="assets/favicon.svg?v=20261026135410" type="image/svg+xml">
+<script>document.documentElement.classList.add("js", "loading")</script>
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/style.css?v=20261026135410">
+<script>
+  // show the page only once its typeface is ready, so text never reflows
+  // from a fallback font after first paint (capped so a slow network still renders)
+  (() => {
+    const done = () => document.documentElement.classList.remove("loading");
+    const f = '"Schibsted Grotesk"';
+    Promise.all(["400", "500", "600", "700", "800"].map((w) => document.fonts.load(`${w} 1em ${f}`))).then(done, done);
+    setTimeout(done, 1500);
+  })();
+</script>
+<script src="assets/main.js?v=20261026135410" defer></script>
+</head>
+<body>
+<header class="nav">
+  <a class="wordmark" href="index.html">Nils Beham</a>
+  <ul>
+    <li><a href="about.html" aria-current="page">About</a></li>
+    <li><a href="research.html">Research &amp; Projects</a></li>
+    <li><a href="writing.html">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+  </ul>
+  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+</header>
+<div class="sheet" role="dialog" aria-label="Menu">
+  <div class="sheet-top"><a class="wordmark" href="index.html">Nils Beham</a><button>Close</button></div>
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html" aria-current="page">About</a></li>
+    <li><a href="research.html">Research &amp; Projects</a></li>
+    <li><a href="writing.html">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+    <li><a href="mailto:nils.beham@gmail.com">Email</a></li>
+  </ul>
+</div>
+
+<main>
+  <header class="page-head grid">
+    <h1>From Linz to Munich</h1>
+    <p class="sub" data-in>Grew up in Austria, served as a paramedic, then moved to Munich to study at the Technical University of Munich (TUM).</p>
+  </header>
+
+
+  <section class="grid about-body" style="padding-bottom:var(--sec)">
+    <figure class="portrait" data-in="soft">
+      <img src="assets/nils.jpg?v=20261026135410" alt="Nils Beham in a navy knit sweater and grey trousers, standing on a lawn in front of a sandstone building" width="1003" height="1400">
+    </figure>
+
+    <div class="about-text measure">
+      <p class="lead" data-in>Physics taught me confidence in solving hard questions. Management and Technology made me ask who ends up using the answers.</p>
+      <dl class="facts" data-in>
+        <div><dt>Based in</dt><dd>Munich, Germany</dd></div>
+        <div><dt>Grew up in</dt><dd>Linz, Austria</dd></div>
+        <div><dt>Languages</dt><dd>German, English</dd></div>
+        <div><dt>Fascinated by</dt><dd>How innovation changes the world</dd></div>
+      </dl>
+
+      <div class="about-sec" data-focus>
+        <h2 data-in>Studies</h2>
+        <div class="prose" data-in>
+          <p>I study Physics and Management and Technology at TUM in parallel, since 2023. In Physics I specialized in applied and engineering physics, with electives in neural networks, scientific programming, condensed matter, biophysics and medical technology. In Management and Technology my focus is computer engineering, alongside human-AI interaction, cloud software engineering, entrepreneurship and law.</p>
+          <p>My Physics thesis, at the Chair of Theoretical Biophysics, fine-tuned Boltz-2 and three other models to predict protein–peptide binding affinity. Right now I am most interested in AI safety, AI security and biosecurity. <a href="projects/fine-tuning-and-fusion.html">Read about the thesis.</a></p>
+        </div>
+      </div>
+
+      <div class="about-sec" data-focus>
+        <h2 data-in>Before university</h2>
+        <div class="prose" data-in>
+          <p>I grew up in Austria and finished school at BRG Linz Fadingerstraße with distinction, majoring in physics, economics and biology. In the summer of 2021 I wrote analysis code for a quantum tomography project at the Quantum &amp; Post-Quantum Lab of FH Upper Austria.</p>
+          <p>For my civil service I chose to gain experience in extreme situations, helping people in emergencies as a paramedic with the Samariterbund in Linz. It taught me to stay calm and keep thinking clearly when it matters most. I continued to volunteer there afterwards.</p>
+        </div>
+      </div>
+
+      <div class="about-sec" data-focus>
+        <h2 data-in>Outside the lab</h2>
+        <div class="prose" data-in>
+          <p>I run track and field at a semi-professional level. The rest of my time goes into reading about my wide range of interests: politics, innovation and technology, geopolitics, history and philosophy, and above all how they shape the way societies change.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="close grid">
+  <h2 data-in>Write to me</h2>
+  <a class="mail" href="mailto:nils.beham@gmail.com" data-in>nils.beham@gmail.com</a>
+  <button class="copy" type="button" data-copy="nils.beham@gmail.com" data-in>Copy address</button>
+  <div class="base">
+    <span>&copy; <span data-year>2026</span> Nils Beham, Munich</span>
+    <nav aria-label="Footer">
+      <a href="about.html">About</a><a href="research.html">Research &amp; Projects</a><a href="writing.html">Blog</a><a href="cv.html">CV</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

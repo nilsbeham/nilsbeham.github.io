@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blog: Nils Beham</title>
+<meta name="description" content="The blog of Nils Beham. Coming soon.">
+<meta name="author" content="Nils Beham">
+<meta name="theme-color" content="#f1f2ef">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blog: Nils Beham">
+<meta property="og:description" content="The blog of Nils Beham. Coming soon.">
+<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<link rel="icon" href="assets/favicon.svg?v=20261026135410" type="image/svg+xml">
+<script>document.documentElement.classList.add("js", "loading")</script>
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/style.css?v=20261026135410">
+<script>
+  // show the page only once its typeface is ready, so text never reflows
+  // from a fallback font after first paint (capped so a slow network still renders)
+  (() => {
+    const done = () => document.documentElement.classList.remove("loading");
+    const f = '"Schibsted Grotesk"';
+    Promise.all(["400", "500", "600", "700", "800"].map((w) => document.fonts.load(`${w} 1em ${f}`))).then(done, done);
+    setTimeout(done, 1500);
+  })();
+</script>
+<script src="assets/main.js?v=20261026135410" defer></script>
+</head>
+<body>
+<header class="nav">
+  <a class="wordmark" href="index.html">Nils Beham</a>
+  <ul>
+    <li><a href="about.html">About</a></li>
+    <li><a href="research.html">Research &amp; Projects</a></li>
+    <li><a href="writing.html" aria-current="page">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+  </ul>
+  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+</header>
+<div class="sheet" role="dialog" aria-label="Menu">
+  <div class="sheet-top"><a class="wordmark" href="index.html">Nils Beham</a><button>Close</button></div>
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="research.html">Research &amp; Projects</a></li>
+    <li><a href="writing.html" aria-current="page">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+    <li><a href="mailto:nils.beham@gmail.com">Email</a></li>
+  </ul>
+</div>
+
+<main>
+  <header class="page-head grid blog-head">
+    <h1>Blog</h1>
+    <p class="blog-soon" data-type="Coming soon">Coming soon<span class="r-caret blink" aria-hidden="true"></span></p>
+  </header>
+</main>
+
+<footer class="close grid">
+  <h2 data-in>Write to me</h2>
+  <a class="mail" href="mailto:nils.beham@gmail.com" data-in>nils.beham@gmail.com</a>
+  <button class="copy" type="button" data-copy="nils.beham@gmail.com" data-in>Copy address</button>
+  <div class="base">
+    <span>&copy; <span data-year>2026</span> Nils Beham, Munich</span>
+    <nav aria-label="Footer">
+      <a href="about.html">About</a><a href="research.html">Research &amp; Projects</a><a href="writing.html">Blog</a><a href="cv.html">CV</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

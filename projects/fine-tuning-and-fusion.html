@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fine-tuning and fusion: Nils Beham</title>
+<meta name="description" content="B.Sc. thesis by Nils Beham: fine-tuning Boltz-2 and three other models for protein–peptide binding-affinity prediction, then fusing their scores.">
+<meta name="author" content="Nils Beham">
+<meta name="theme-color" content="#f1f2ef">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Fine-tuning and fusion: Nils Beham">
+<meta property="og:description" content="B.Sc. thesis by Nils Beham: fine-tuning Boltz-2 and three other models for protein–peptide binding-affinity prediction, then fusing their scores.">
+<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<link rel="icon" href="../assets/favicon.svg?v=20261026135410" type="image/svg+xml">
+<script>document.documentElement.classList.add("js", "loading")</script>
+<link rel="preload" href="../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/style.css?v=20261026135410">
+<script>
+  // show the page only once its typeface is ready, so text never reflows
+  // from a fallback font after first paint (capped so a slow network still renders)
+  (() => {
+    const done = () => document.documentElement.classList.remove("loading");
+    const f = '"Schibsted Grotesk"';
+    Promise.all(["400", "500", "600", "700", "800"].map((w) => document.fonts.load(`${w} 1em ${f}`))).then(done, done);
+    setTimeout(done, 1500);
+  })();
+</script>
+<script src="../assets/main.js?v=20261026135410" defer></script>
+</head>
+<body>
+<header class="nav">
+  <a class="wordmark" href="../index.html">Nils Beham</a>
+  <ul>
+    <li><a href="../about.html">About</a></li>
+    <li><a href="../research.html" aria-current="page">Research &amp; Projects</a></li>
+    <li><a href="../writing.html">Blog</a></li>
+    <li><a href="../cv.html">CV</a></li>
+  </ul>
+  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+</header>
+<div class="sheet" role="dialog" aria-label="Menu">
+  <div class="sheet-top"><a class="wordmark" href="../index.html">Nils Beham</a><button>Close</button></div>
+  <ul>
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../about.html">About</a></li>
+    <li><a href="../research.html" aria-current="page">Research &amp; Projects</a></li>
+    <li><a href="../writing.html">Blog</a></li>
+    <li><a href="../cv.html">CV</a></li>
+    <li><a href="mailto:nils.beham@gmail.com">Email</a></li>
+  </ul>
+</div>
+
+<main>
+  <header class="page-head grid">
+    <h1>Fine-tuning and fusion</h1>
+    <p class="sub" data-in>Towards accurate protein–peptide binding-affinity prediction. My B.Sc. Physics thesis at the Chair of Theoretical Biophysics, Technical University of Munich, supervised by Prof.&nbsp;Dr. Martin Zacharias and advised by M.Sc. Niklas Halbwedl.</p>
+    <p class="back" data-in><a class="link" href="../research.html">All research &amp; projects</a></p>
+  </header>
+  <section class="sec field">
+    <div class="grid">
+      <h2 class="c-full" data-in>Three questions</h2>
+      <ol class="questions">
+        <li class="q" data-in><details><summary><span class="n">Question 1</span><h3>Does Boltz-2’s affinity head transfer to peptides?</h3><span class="plus" aria-hidden="true"></span></summary><p><b>No.</b> It reaches r&nbsp;=&nbsp;0.30 at best, and that signal largely tracks molecular weight.</p></details></li>
+        <li class="q" data-in><details><summary><span class="n">Question 2</span><h3>Does fine-tuning help, and do four architectures learn the same thing?</h3><span class="plus" aria-hidden="true"></span></summary><p><b>It helps every model</b>, lifting three of them to about r&nbsp;=&nbsp;0.44. Yet they learn different signals and correlate only weakly with each other.</p></details></li>
+        <li class="q" data-in><details><summary><span class="n">Question 3</span><h3>Does combining them beat any single model?</h3><span class="plus" aria-hidden="true"></span></summary><p><b>Yes.</b> A de-biased mean of all four reaches r&nbsp;=&nbsp;0.573, with a mean absolute error of 1.46&nbsp;kcal/mol.</p></details></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec grid split">
+    <div class="c-left">
+      <h2 data-in>The problem</h2>
+    </div>
+    <div class="c-right prose measure">
+      <p class="lead" data-in>Cyclic peptides are large enough to engage protein surfaces that small molecules cannot reach, yet can stay cell-permeable. That makes them attractive drugs, and hard to model.</p>
+      <p data-in>Boltz-2 predicts the structure of biomolecular complexes and, through a separate head, their binding affinity. That affinity head was trained only on protein–small-molecule data, so peptides sit outside its training distribution. It also accepts the binder only as a SMILES string, a text notation for small molecules.</p>
+      <h2 data-in>Structure first</h2>
+      <p data-in>Encoding the peptide as SMILES hurt structure prediction badly. The median centroid distance to the crystal pose was 3.56&nbsp;Å, against 0.74&nbsp;Å when the peptide was encoded as a chain of residues. To keep the better structure and still use the SMILES-only affinity head, I built Boltzina, a fork of Boltz-2 that skips the structure module and injects externally computed coordinates. It runs 7.3 to 11.8 times faster.</p>
+    </div>
+    <div class="fig-pair">
+      <figure class="fig wide" data-in="wipe">
+        <img src="../assets/pose-b.jpg?v=20261026135410" alt="Three panels: a grey receptor ribbon with the bound macrocycle from the front and rotated 150 degrees, then the macrocycle alone. Crystal pose in orange, prediction in green, almost overlapping." width="2000" height="891" loading="lazy">
+        <figcaption>Prediction with the peptide encoded as residues (green) against the crystal structure (orange), PDB&nbsp;1BCK.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec grid split" style="padding-top:0">
+    <h2 class="c-left" data-in>Then affinity</h2>
+    <div class="c-right prose measure">
+      <p data-in>Untuned, the affinity head reached r&nbsp;≈&nbsp;0.30 at best, well below the r&nbsp;≈&nbsp;0.62 Boltz-2 reports for small-molecule ligands, and the signal mostly tracked molecular weight.</p>
+      <p data-in>I fine-tuned the head under both encodings. On SMILES input, test-set r rose from 0.257 to 0.438. On residue input it rose from 0.059 to 0.431. Alongside, I fine-tuned a graph neural network (GEMS, r&nbsp;=&nbsp;0.431) and a protein language model (r&nbsp;=&nbsp;0.340) on the same receptor-disjoint split of about 3,000 complexes.</p>
+      <p data-in>The four models correlate only weakly with each other, even the two that share an architecture. Averaging their de-biased predictions gave r&nbsp;=&nbsp;0.573, with a mean absolute error of 1.46&nbsp;kcal/mol, better than any single model and better than fusing the untuned versions (r&nbsp;=&nbsp;0.435). The gain holds after controlling for peptide size and interface residue count.</p>
+    </div>
+    <div class="fig-pair">
+      <figure class="fig narrow" data-in="wipe">
+        <img src="../assets/parity.jpg?v=20261026135410" alt="Scatter plot of predicted against experimental affinity for the fused score, Pearson r 0.573, Spearman rho 0.567" width="1400" height="1225" loading="lazy">
+        <figcaption>Fused score against experiment on the test set, in kcal/mol.</figcaption>
+      </figure>
+      <div class="note prose measure" data-in>
+        <p class="lead">Fine-tuning and fusion each help on their own, and more so together.</p>
+        <p>Combining several independently fine-tuned models looks like a cheaper alternative to designing and training one large, purpose-built model from scratch.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="sec grid">
+    <h2 class="c-full" data-in style="margin-bottom:56px">One fused score</h2>
+    <figure class="fig chart-wrap" data-in>
+      <svg class="slope" viewBox="0 0 820 520" role="img" aria-labelledby="slope-t">
+        <title id="slope-t">Test-set Pearson r before and after fine-tuning. Fusion 0.435 to 0.573, GEMS 0.374 to 0.440, Boltz-2 SMILES 0.260 to 0.443, Boltz-2 residue 0.063 to 0.435, PLM 0.187 to 0.341.</title>
+        <g>
+          <line class="tick" x1="110" x2="600" y1="470" y2="470"/><text class="tl" x="96" y="474" text-anchor="end">0.0</text>
+          <line class="tick" x1="110" x2="600" y1="400" y2="400"/><text class="tl" x="96" y="404" text-anchor="end">0.1</text>
+          <line class="tick" x1="110" x2="600" y1="330" y2="330"/><text class="tl" x="96" y="334" text-anchor="end">0.2</text>
+          <line class="tick" x1="110" x2="600" y1="260" y2="260"/><text class="tl" x="96" y="264" text-anchor="end">0.3</text>
+          <line class="tick" x1="110" x2="600" y1="190" y2="190"/><text class="tl" x="96" y="194" text-anchor="end">0.4</text>
+          <line class="tick" x1="110" x2="600" y1="120" y2="120"/><text class="tl" x="96" y="124" text-anchor="end">0.5</text>
+          <line class="tick" x1="110" x2="600" y1="50" y2="50"/><text class="tl" x="96" y="54" text-anchor="end">0.6</text>
+          <line class="axis" x1="190" x2="190" y1="40" y2="470"/>
+          <line class="axis" x1="540" x2="540" y1="40" y2="470"/>
+          <text class="col" x="190" y="504" text-anchor="middle">untuned</text>
+          <text class="col" x="540" y="504" text-anchor="middle">fine-tuned</text>
+        </g>
+        <g class="series" tabindex="0" style="--k:1" aria-label="GEMS (graph network): 0.374 untuned, 0.440 fine-tuned">
+          <path class="hit" d="M190 208.2 L540 162"/>
+          <path class="ln" d="M190 208.2 L540 162"/>
+          <g class="end"><circle class="dot" cx="190" cy="208.2" r="4"/><circle class="dot" cx="540" cy="162" r="4"/>
+          <text class="val" x="176" y="213" text-anchor="end">0.374</text>
+          <text class="lab" x="556" y="140"><tspan class="val">0.440</tspan>  GEMS (graph network)</text></g>
+        </g>
+        <g class="series" tabindex="0" style="--k:2" aria-label="Boltz-2, SMILES: 0.260 untuned, 0.443 fine-tuned">
+          <path class="hit" d="M190 288 L540 159.9"/>
+          <path class="ln" d="M190 288 L540 159.9"/>
+          <g class="end"><circle class="dot" cx="190" cy="288" r="4"/><circle class="dot" cx="540" cy="159.9" r="4"/>
+          <text class="val" x="176" y="293" text-anchor="end">0.260</text>
+          <text class="lab" x="556" y="163"><tspan class="val">0.443</tspan>  Boltz-2, SMILES</text></g>
+        </g>
+        <g class="series" tabindex="0" style="--k:3" aria-label="Boltz-2, residues: 0.063 untuned, 0.435 fine-tuned">
+          <path class="hit" d="M190 425.9 L540 165.5"/>
+          <path class="ln" d="M190 425.9 L540 165.5"/>
+          <g class="end"><circle class="dot" cx="190" cy="425.9" r="4"/><circle class="dot" cx="540" cy="165.5" r="4"/>
+          <text class="val" x="176" y="431" text-anchor="end">0.063</text>
+          <text class="lab" x="556" y="186"><tspan class="val">0.435</tspan>  Boltz-2, residues</text></g>
+        </g>
+        <g class="series" tabindex="0" style="--k:4" aria-label="PLM (sequence only): 0.187 untuned, 0.341 fine-tuned">
+          <path class="hit" d="M190 339.1 L540 231.3"/>
+          <path class="ln" d="M190 339.1 L540 231.3"/>
+          <g class="end"><circle class="dot" cx="190" cy="339.1" r="4"/><circle class="dot" cx="540" cy="231.3" r="4"/>
+          <text class="val" x="176" y="344" text-anchor="end">0.187</text>
+          <text class="lab" x="556" y="236"><tspan class="val">0.341</tspan>  PLM (sequence only)</text></g>
+        </g>
+        <g class="series" tabindex="0" style="--k:0" aria-label="Fusion of all four: 0.435 untuned, 0.573 fine-tuned">
+          <path class="hit" d="M190 165.5 L540 68.9"/>
+          <path class="ln hl" d="M190 165.5 L540 68.9"/>
+          <g class="end"><circle class="dot hl" cx="190" cy="165.5" r="5.5"/><circle class="dot hl" cx="540" cy="68.9" r="5.5"/>
+          <text class="val hl" x="176" y="170" text-anchor="end">0.435</text>
+          <text class="lab hl" x="556" y="74"><tspan class="val hl">0.573</tspan>  Fusion of all four</text></g>
+        </g>
+      </svg>
+      <figcaption>Test-set Pearson r for each model before and after fine-tuning, as presented at the defence. Hover or tap a model to isolate it.</figcaption>
+    </figure>
+    <div class="chart-text">
+      <p class="big-num" data-in><span data-count="0.573">0.573</span></p>
+      <p data-in>The four fine-tuned models, averaged, beat every one of them alone. The test set is receptor-disjoint at 90&nbsp;% sequence identity and spans far more receptor families than the training data, so the number measures generalization rather than recall.</p>
+      <p data-in>Fine-tuning and combining existing models could be a cheaper route than training one large purpose-built model from scratch.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="close grid">
+  <h2 data-in>Write to me</h2>
+  <a class="mail" href="mailto:nils.beham@gmail.com" data-in>nils.beham@gmail.com</a>
+  <button class="copy" type="button" data-copy="nils.beham@gmail.com" data-in>Copy address</button>
+  <div class="base">
+    <span>&copy; <span data-year>2026</span> Nils Beham, Munich</span>
+    <nav aria-label="Footer">
+      <a href="../about.html">About</a><a href="../research.html">Research &amp; Projects</a><a href="../writing.html">Blog</a><a href="../cv.html">CV</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

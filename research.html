@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research and projects: Nils Beham</title>
+<meta name="description" content="Research projects by Nils Beham, starting with his B.Sc. thesis on protein–peptide binding-affinity prediction.">
+<meta name="author" content="Nils Beham">
+<meta name="theme-color" content="#f1f2ef">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Research and projects: Nils Beham">
+<meta property="og:description" content="Research projects by Nils Beham, starting with his B.Sc. thesis on protein–peptide binding-affinity prediction.">
+<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<link rel="icon" href="assets/favicon.svg?v=20261026135410" type="image/svg+xml">
+<script>document.documentElement.classList.add("js", "loading")</script>
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/style.css?v=20261026135410">
+<script>
+  // show the page only once its typeface is ready, so text never reflows
+  // from a fallback font after first paint (capped so a slow network still renders)
+  (() => {
+    const done = () => document.documentElement.classList.remove("loading");
+    const f = '"Schibsted Grotesk"';
+    Promise.all(["400", "500", "600", "700", "800"].map((w) => document.fonts.load(`${w} 1em ${f}`))).then(done, done);
+    setTimeout(done, 1500);
+  })();
+</script>
+<script src="assets/main.js?v=20261026135410" defer></script>
+</head>
+<body>
+<header class="nav">
+  <a class="wordmark" href="index.html">Nils Beham</a>
+  <ul>
+    <li><a href="about.html">About</a></li>
+    <li><a href="research.html" aria-current="page">Research &amp; Projects</a></li>
+    <li><a href="writing.html">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+  </ul>
+  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+</header>
+<div class="sheet" role="dialog" aria-label="Menu">
+  <div class="sheet-top"><a class="wordmark" href="index.html">Nils Beham</a><button>Close</button></div>
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="research.html" aria-current="page">Research &amp; Projects</a></li>
+    <li><a href="writing.html">Blog</a></li>
+    <li><a href="cv.html">CV</a></li>
+    <li><a href="mailto:nils.beham@gmail.com">Email</a></li>
+  </ul>
+</div>
+
+<main>
+  <header class="page-head grid">
+    <h1>Research &amp; projects</h1>
+    <p class="sub" data-in>Here I document my journey through research: the projects I take on, the questions behind them, and what I learn along the way.</p>
+  </header>
+
+  <section class="grid" style="padding-bottom:var(--sec)">
+    <ul class="projects">
+      <li>
+        <a class="project" data-tilt href="projects/fine-tuning-and-fusion.html">
+          <figure class="fig project-img" data-in="wipe">
+            <img src="assets/4kel.jpg?v=20261026135410" alt="Ribbon render of a receptor protein in green with a bound peptide in orange" width="808" height="728">
+          </figure>
+          <div class="project-txt">
+            <p class="meta" data-in>B.Sc. Physics thesis, Chair of Theoretical Biophysics, Technical University of Munich, 2026</p>
+            <h2 data-in>Fine-tuning and fusion</h2>
+            <p class="lead" data-in>Boltz-2’s affinity head was never trained on peptides. I fine-tuned it, trained three other models on the same data, and fused all four into one score.</p>
+            <dl class="stats" data-in>
+              <div><dt><span data-count="0.573">0.573</span></dt><dd>Pearson r of the fused score on unseen receptors</dd></div>
+              <div><dt><span data-count="0.74">0.74</span>&nbsp;Å</dt><dd>median centroid error with the peptide encoded as residues</dd></div>
+              <div><dt>7.3–11.8×</dt><dd>faster affinity scoring with Boltzina, my Boltz-2 fork</dd></div>
+            </dl>
+            <ul class="tags" data-in><li>Boltz-2</li><li>Graph neural networks</li><li>Protein language models</li><li>Score fusion</li></ul>
+            <span class="more" data-in>Read the project <span aria-hidden="true">→</span></span>
+          </div>
+        </a>
+      </li>
+      <!-- Add the next project as another <li> above this block, copying the one above. -->
+      <li class="research-soon">
+        <p class="blog-soon" data-type="Soon to come">Soon to come<span class="r-caret blink" aria-hidden="true"></span></p>
+      </li>
+    </ul>
+  </section>
+</main>
+
+<footer class="close grid">
+  <h2 data-in>Write to me</h2>
+  <a class="mail" href="mailto:nils.beham@gmail.com" data-in>nils.beham@gmail.com</a>
+  <button class="copy" type="button" data-copy="nils.beham@gmail.com" data-in>Copy address</button>
+  <div class="base">
+    <span>&copy; <span data-year>2026</span> Nils Beham, Munich</span>
+    <nav aria-label="Footer">
+      <a href="about.html">About</a><a href="research.html">Research &amp; Projects</a><a href="writing.html">Blog</a><a href="cv.html">CV</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
