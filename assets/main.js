@@ -190,16 +190,25 @@ if (hero) {
       }
       lastT = loop.currentTime;
     };
+    // which video should be moving: the intro while it pulls focus, then the loop
+    let phase = "wait";
+    const current = () => (phase === "intro" ? video : phase === "loop" ? loop : null);
     // resolves once a video has put a frame on screen, so nothing above it
-    // fades away while it is still black
-    const firstFrame = (v) => new Promise((resolve) => {
-      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => resolve());
-      else v.addEventListener("timeupdate", resolve, { once: true });
-    });
+    // fades away while it is still black; capped, so a callback the browser
+    // never sends cannot hold the hero
+    const firstFrame = (v) => Promise.race([
+      new Promise((resolve) => {
+        if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => resolve());
+        else v.addEventListener("timeupdate", resolve, { once: true });
+      }),
+      wait(600),
+    ]);
     const startLoop = () => loop.play()
       .then(() => firstFrame(loop))
       .then(() => tile.classList.add("looping"));
     const toLoop = () => {
+      if (phase === "loop") return;
+      phase = "loop";
       loop.currentTime = 0;
       loop.playbackRate = FIRST_RATE;
       loop.addEventListener("timeupdate", onWrap);
@@ -215,7 +224,34 @@ if (hero) {
         gestures.forEach((t) => addEventListener(t, go, { passive: true }));
       });
     };
-    video.addEventListener("ended", toLoop, { once: true });
+    video.addEventListener("ended", toLoop);
+
+    // self-healing: browsers pause or freeze video on their own (Safari's
+    // back/forward cache brings the page back with a frozen video; background
+    // tabs and power saving pause it), so once a second the video that should
+    // be moving is checked, and restarted if it is not
+    let lastSeen = -1, frozen = 0;
+    const heal = () => {
+      const v = current();
+      if (!v || document.hidden) return;
+      if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
+      const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
+      if (v.paused) return restart();
+      if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= 2) {
+        frozen = 0;
+        v.pause();
+        restart();
+      } else if (v.currentTime !== lastSeen) frozen = 0;
+      lastSeen = v.currentTime;
+    };
+    setInterval(heal, 1000);
+    document.addEventListener("visibilitychange", heal);
+    addEventListener("pageshow", (e) => {
+      const v = current();
+      if (!e.persisted || !v) return;
+      v.pause();
+      (v === loop ? startLoop() : v.play()).catch(() => {});
+    });
 
     // phones never preload video, so a muted play-and-pause fetches the files
     // while the name types; otherwise the intro would start late and the
@@ -224,6 +260,8 @@ if (hero) {
     // starts), intro first. A refusal (an iPhone in Low Power Mode) is known
     // long before it matters
     const prime = (v) => v.play().then(() => {
+      // a real start may have come first; only rewind a video still waiting
+      if (v === current()) return;
       v.pause();
       v.currentTime = 0;
     });
@@ -271,8 +309,16 @@ if (hero) {
       setTimeout(() => intro.remove(), 300);
     };
     const startIntro = async () => {
-      if (!(await canPlay)) return playAsImages();
-      await video.play();
+      // preloading normally settles within a moment; never hold the intro on it
+      const ok = await Promise.race([canPlay, wait(600).then(() => null)]);
+      if (ok === false) return playAsImages();
+      phase = "intro";
+      try {
+        await video.play();
+      } catch {
+        phase = "wait";
+        return playAsImages();
+      }
       await firstFrame(video);
       tile.classList.add("playing");
     };
@@ -300,18 +346,18 @@ if (hero) {
     roleText.textContent = "";
     roleText.classList.add("live");
     roleCaret.style.opacity = "0";
-    // staged so only one thing moves at a time: the still, blurred tile
-    // fades in, the name types, then the focus pull starts with the first
-    // role, and the rest of the column settles in last
+    // staged: the still, blurred tile fades in, then the focus pull and the
+    // typed name start together, the first role follows, and the rest of the
+    // column settles in last
     document.fonts.ready.then(async () => {
       hero.classList.add("tile-in");
       requestAnimationFrame(() => requestAnimationFrame(painted));
       await wait(700);
+      // the focus pull starts with the typing, so the picture never stands still
+      startIntro().catch(toLoop);
       await typeName();
       await wait(250);
-      startIntro().catch(toLoop);
       roleCaret.style.opacity = "1";
-      // give the video decoder a moment before the column starts fading in
       await wait(700);
       hero.classList.add("ready");
       setTimeout(() => hero.classList.add("settled"), 3200);
