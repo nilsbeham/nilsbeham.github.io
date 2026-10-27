@@ -268,12 +268,13 @@ if (hero) {
     // be moving is checked, and restarted if it is not
     // when each video last put a frame on screen: a picture can freeze while
     // the clock keeps running, which the clock alone cannot show
-    const shownAt = new Map(), shownTime = new Map();
+    const shownAt = new Map(), shownTime = new Map(), shownCount = new Map();
     const trackFrames = (v) => {
       if (!v.requestVideoFrameCallback) return;
       const onFrame = (now, meta) => {
         shownAt.set(v, performance.now());
         shownTime.set(v, meta.mediaTime);
+        shownCount.set(v, (shownCount.get(v) || 0) + 1);
         v.requestVideoFrameCallback(onFrame);
       };
       v.requestVideoFrameCallback(onFrame);
@@ -325,12 +326,13 @@ if (hero) {
       rearm();
       v.pause();
       (v === loop ? startLoop() : v.play()).catch(() => {});
-      // WebKit often brings the picture back frozen; check early instead of
-      // waiting for the watchdog, so a return never shows a stuck frame
-      const back = performance.now();
+      // WebKit often brings the picture back frozen, sometimes after drawing
+      // a single frame; about 25 frames are due in the first 800 ms, so far
+      // fewer means frozen, and it is fixed then rather than by the watchdog
+      const before = shownCount.get(v) || 0;
       setTimeout(() => {
-        if (v.requestVideoFrameCallback && current() === v && !v.paused && shownAt.get(v) <= back) unfreeze(v);
-      }, 400);
+        if (v.requestVideoFrameCallback && current() === v && !v.paused && (shownCount.get(v) || 0) - before < 5) unfreeze(v);
+      }, 800);
     });
 
     // phones never preload video, so a muted play-and-pause fetches the files

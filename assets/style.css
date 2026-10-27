@@ -802,3 +802,7 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 .sheet.open { transition: clip-path 420ms var(--ease-in-out), visibility 0s; }
 /* white under the nav's difference blend: dark on the page, white over the video */
 .nav :focus-visible { outline-color: #fff; }
+/* the address stays on one line: on narrow phones the 36 px floor made it
+   break mid-word ("gmail.co / m"); it now shrinks just enough to fit there,
+   and wider screens keep the clamp as before */
+.close .mail { font-size: min(clamp(2.25rem, 0.6rem + 6.6vw, 8.5rem), calc((100vw - 2 * var(--m)) / 11)); }
