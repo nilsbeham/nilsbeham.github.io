@@ -137,10 +137,13 @@ if (hero) {
     }
   }
 
+  const still = tile.querySelector(".v-still");
+  const showStill = () => (still.src = video.dataset.still);
+
   if (reduced) {
     video.removeAttribute("autoplay");
     video.pause();
-    video.poster = video.dataset.still;
+    showStill();
     hero.classList.add("tile-in");
     glyphs.forEach((g) => g.classList.add("on"));
     caret.remove();
@@ -170,15 +173,23 @@ if (hero) {
       }
       lastT = loop.currentTime;
     };
-    const startLoop = () => loop.play().then(() => tile.classList.add("looping"));
+    // resolves once a video has put a frame on screen, so nothing above it
+    // fades away while it is still black
+    const firstFrame = (v) => new Promise((resolve) => {
+      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => resolve());
+      else v.addEventListener("timeupdate", resolve, { once: true });
+    });
+    const startLoop = () => loop.play()
+      .then(() => firstFrame(loop))
+      .then(() => tile.classList.add("looping"));
     const toLoop = () => {
       loop.currentTime = 0;
       loop.playbackRate = FIRST_RATE;
       loop.addEventListener("timeupdate", onWrap);
       startLoop().catch(() => {
-        // autoplay refused (an iPhone in Low Power Mode, for one): hold the
-        // sharp end frame and start the loop on the first tap, which is always allowed
-        video.poster = video.dataset.still;
+        // video refused and no image fallback: hold the sharp end frame and
+        // start the loop on the first tap, which is always allowed
+        showStill();
         const gestures = ["touchend", "click", "keydown"];
         const go = () => {
           gestures.forEach((t) => removeEventListener(t, go));
@@ -189,9 +200,25 @@ if (hero) {
     };
     video.addEventListener("ended", toLoop, { once: true });
 
-    // iPhones in Low Power Mode refuse every video, but Safari also plays an
-    // mp4 inside <img> like an animated image, which no autoplay rule covers;
-    // the intro runs once that way, then the loop takes over on its last frame
+    // phones never preload video, so a muted play-and-pause fetches the files
+    // while the name types; otherwise the intro would start late and the
+    // picture would stop at the handover while the loop downloads. It starts
+    // only after the page has painted (iOS holds the first paint while a video
+    // starts), intro first. A refusal (an iPhone in Low Power Mode) is known
+    // long before it matters
+    const prime = (v) => v.play().then(() => {
+      v.pause();
+      v.currentTime = 0;
+    });
+    let painted;
+    const canPlay = new Promise((resolve) => (painted = resolve))
+      .then(() => prime(video))
+      .then(() => true, () => false);
+    canPlay.then((ok) => ok && prime(loop)).catch(() => {});
+
+    // Low Power Mode refuses every video, but Safari also plays an mp4 inside
+    // <img> like an animated image, which no autoplay rule covers; the intro
+    // runs once that way, then the loop takes over on its last frame
     const loadImg = async (src) => {
       const img = new Image();
       img.className = "v-img";
@@ -202,16 +229,35 @@ if (hero) {
       await img.decode();
       return img;
     };
+    const asImage = (v) => canPlay.then((ok) => (ok ? null : loadImg(v.querySelector("source").src)));
+    const introImg = asImage(video);
+    const loopImg = asImage(loop);
+    // where mp4 cannot be an image, the refusal is handled by toLoop below;
+    // these keep the unused attempts from reporting as unhandled errors
+    introImg.catch(() => {});
+    loopImg.catch(() => {});
+    // a new image starts its slow zoom from the beginning; match the still's
+    const show = (img) => {
+      tile.appendChild(img);
+      const [ref] = still.getAnimations();
+      const [own] = img.getAnimations();
+      if (ref && own) own.currentTime = ref.currentTime;
+    };
     const playAsImages = async () => {
-      const intro = await loadImg(video.querySelector("source").src);
-      const next = loadImg(loop.querySelector("source").src);
-      tile.appendChild(intro);
-      // swap just before the intro ends: a late swap would flash its first,
+      const intro = await introImg;
+      show(intro);
+      // swap just before the intro (6.08 s) ends: a late swap would flash its first,
       // blurred frame again as the image repeats
-      const [loopImg] = await Promise.all([next, wait(6600 - 70)]);
-      tile.appendChild(loopImg);
+      const [next] = await Promise.all([loopImg, wait(6080 - 70)]);
+      show(next);
       // the intro stays underneath until the loop has surely painted
       setTimeout(() => intro.remove(), 300);
+    };
+    const startIntro = async () => {
+      if (!(await canPlay)) return playAsImages();
+      await video.play();
+      await firstFrame(video);
+      tile.classList.add("playing");
     };
 
     // slight parallax: the video drifts against the pointer
@@ -242,10 +288,11 @@ if (hero) {
     // role, and the rest of the column settles in last
     document.fonts.ready.then(async () => {
       hero.classList.add("tile-in");
+      requestAnimationFrame(() => requestAnimationFrame(painted));
       await wait(700);
       await typeName();
       await wait(250);
-      video.play().catch(() => playAsImages().catch(toLoop));
+      startIntro().catch(toLoop);
       roleCaret.style.opacity = "1";
       // give the video decoder a moment before the column starts fading in
       await wait(700);
