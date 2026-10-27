@@ -765,3 +765,9 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 /* counting digits keep one width, so the number does not wobble sideways */
 [data-count] { font-variant-numeric: tabular-nums; }
 .hero-tile .v-img { z-index: 2; }
+/* the still first frame covers the videos until one has drawn a frame: iOS
+   paints a not-yet-playing video black and ignores its poster. The videos
+   themselves stay visible, since WebKit stops updating a video that starts
+   playing while hidden */
+.hero-tile .v-still { transition: opacity 300ms var(--ease-out); }
+.hero-tile.playing .v-still, .hero-tile.looping .v-still { opacity: 0; }
