@@ -203,13 +203,21 @@ if (hero) {
       }),
       wait(600),
     ]);
+    // WebKit (Safari on the Mac) can stop delivering frames after a small seek
+    // (a fraction of a second, or to the position the video already holds):
+    // the clock runs on, but the picture stays put until a seek of half a
+    // second or more. So videos only ever seek by at least that much
+    const BIG_SEEK = 0.5;
+    const seekTo = (v, t) => {
+      if (Math.abs(v.currentTime - t) >= BIG_SEEK) v.currentTime = t;
+    };
     const startLoop = () => loop.play()
       .then(() => firstFrame(loop))
       .then(() => tile.classList.add("looping"));
     const toLoop = () => {
       if (phase === "loop") return;
       phase = "loop";
-      loop.currentTime = 0;
+      seekTo(loop, 0);
       loop.playbackRate = FIRST_RATE;
       loop.addEventListener("timeupdate", onWrap);
       startLoop().catch(() => {
@@ -230,13 +238,40 @@ if (hero) {
     // back/forward cache brings the page back with a frozen video; background
     // tabs and power saving pause it), so once a second the video that should
     // be moving is checked, and restarted if it is not
-    let lastSeen = -1, frozen = 0;
+    // when each video last put a frame on screen: a picture can freeze while
+    // the clock keeps running, which the clock alone cannot show
+    const shownAt = new Map();
+    const trackFrames = (v) => {
+      if (!v.requestVideoFrameCallback) return;
+      const onFrame = () => {
+        shownAt.set(v, performance.now());
+        v.requestVideoFrameCallback(onFrame);
+      };
+      v.requestVideoFrameCallback(onFrame);
+    };
+    trackFrames(video);
+    trackFrames(loop);
+    let lastSeen = -1, frozen = 0, watched = null;
+    // grace for a video that just became the one to watch (or a page that
+    // just became visible again): it has not had the chance to draw yet
+    const rearm = () => {
+      watched = current();
+      if (watched) shownAt.set(watched, performance.now());
+    };
     const heal = () => {
       const v = current();
       if (!v || document.hidden) return;
+      if (v !== watched) rearm();
       if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
       const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
       if (v.paused) return restart();
+      // the clock runs but no frame has reached the screen for 1.5 s: a seek
+      // of a full second wakes the picture (small ones do not); backwards,
+      // so it lands close to the frame that froze
+      if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) {
+        v.currentTime = v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
+        shownAt.set(v, performance.now());
+      }
       if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= 2) {
         frozen = 0;
         v.pause();
@@ -245,10 +280,14 @@ if (hero) {
       lastSeen = v.currentTime;
     };
     setInterval(heal, 1000);
-    document.addEventListener("visibilitychange", heal);
+    document.addEventListener("visibilitychange", () => {
+      rearm();
+      heal();
+    });
     addEventListener("pageshow", (e) => {
       const v = current();
       if (!e.persisted || !v) return;
+      rearm();
       v.pause();
       (v === loop ? startLoop() : v.play()).catch(() => {});
     });
@@ -259,11 +298,11 @@ if (hero) {
     // only after the page has painted (iOS holds the first paint while a video
     // starts), intro first. A refusal (an iPhone in Low Power Mode) is known
     // long before it matters
+    // no rewind afterwards: the playhead moves a few hundredths of a second at
+    // most, where the picture is at rest, and a small seek could freeze it
     const prime = (v) => v.play().then(() => {
-      // a real start may have come first; only rewind a video still waiting
-      if (v === current()) return;
-      v.pause();
-      v.currentTime = 0;
+      // a real start may have come first; only pause a video still waiting
+      if (v !== current()) v.pause();
     });
     let painted;
     const canPlay = new Promise((resolve) => (painted = resolve))
