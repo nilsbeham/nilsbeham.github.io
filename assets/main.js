@@ -74,17 +74,30 @@ document.querySelectorAll("section, header.page-head, footer").forEach((sec) => 
   sec.querySelectorAll("[data-in]").forEach((el, i) => el.style.setProperty("--s", i));
 });
 document.querySelectorAll(".slope .ln").forEach((p) => p.style.setProperty("--len", Math.ceil(p.getTotalLength()) + 2));
+// the stagger counts from the first block revealed together in its section,
+// so content further down a long section does not wait for blocks above it
+// that appeared long ago
+const sectionOf = (el) => el.closest("section, header.page-head, footer");
 const io = new IntersectionObserver(
-  (entries) => entries.forEach((e) => {
-    if (!e.isIntersecting) return;
-    io.unobserve(e.target);
-    // a picture reveals only once it is decoded, so its fade or wipe never
-    // starts on a blank or half-drawn image or stalls while a phone decodes it
-    // (a request that hangs without failing reveals after 8 s regardless)
-    const imgs = [...e.target.querySelectorAll("img")];
-    Promise.race([Promise.all(imgs.map((img) => img.decode().catch(() => {}))), wait(8000)])
-      .then(() => e.target.classList.add("in"));
-  }),
+  (entries) => {
+    const shown = entries.filter((e) => e.isIntersecting).map((e) => e.target);
+    const first = new Map();
+    for (const el of shown) {
+      const s = el.style.getPropertyValue("--s");
+      if (s !== "") first.set(sectionOf(el), Math.min(first.get(sectionOf(el)) ?? Infinity, +s));
+    }
+    shown.forEach((el) => {
+      const s = el.style.getPropertyValue("--s");
+      if (s !== "") el.style.setProperty("--s", +s - first.get(sectionOf(el)));
+      io.unobserve(el);
+      // a picture reveals only once it is decoded, so its fade or wipe never
+      // starts on a blank or half-drawn image or stalls while a phone decodes it
+      // (a request that hangs without failing reveals after 8 s regardless)
+      const imgs = [...el.querySelectorAll("img")];
+      Promise.race([Promise.all(imgs.map((img) => img.decode().catch(() => {}))), wait(8000)])
+        .then(() => el.classList.add("in"));
+    });
+  },
   { rootMargin: "0px 0px -12% 0px" }
 );
 whenShown(() => document.querySelectorAll("[data-in], .slope").forEach((el) => io.observe(el)));

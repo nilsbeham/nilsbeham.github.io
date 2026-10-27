@@ -795,3 +795,10 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* the accent focus ring is invisible on the accent-blue field */
 .field :focus-visible { outline-color: var(--field-ink); }
+
+/* ---------- round 21: owner-approved visible tweaks ---------- */
+/* the menu wipes closed the way it opens: it stays visible until the wipe is done */
+.sheet { transition: clip-path 420ms var(--ease-in-out), visibility 0s 420ms; }
+.sheet.open { transition: clip-path 420ms var(--ease-in-out), visibility 0s; }
+/* white under the nav's difference blend: dark on the page, white over the video */
+.nav :focus-visible { outline-color: #fff; }
