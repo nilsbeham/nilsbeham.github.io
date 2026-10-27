@@ -274,6 +274,14 @@ if (hero) {
       watched = current();
       if (watched) shownAt.set(watched, performance.now());
     };
+    const unfreeze = (v) => {
+      const frozenAt = shownTime.get(v);
+      const to = frozenAt !== undefined && Math.abs(v.currentTime - frozenAt) >= BIG_SEEK ? frozenAt
+        : v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
+      if (v === loop) lastT = to;
+      v.currentTime = to;
+      shownAt.set(v, performance.now());
+    };
     const heal = () => {
       const v = current();
       if (!v || document.hidden) return;
@@ -285,14 +293,7 @@ if (hero) {
       // seek wakes the picture (small ones do not). It goes back to the frame
       // that froze when that is far enough away, so playback carries on from
       // there; lastT is moved too, so the loop does not take it for its wrap
-      if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) {
-        const frozenAt = shownTime.get(v);
-        const to = frozenAt !== undefined && Math.abs(v.currentTime - frozenAt) >= BIG_SEEK ? frozenAt
-          : v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
-        if (v === loop) lastT = to;
-        v.currentTime = to;
-        shownAt.set(v, performance.now());
-      }
+      if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) unfreeze(v);
       if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= 2) {
         frozen = 0;
         v.pause();
@@ -311,6 +312,12 @@ if (hero) {
       rearm();
       v.pause();
       (v === loop ? startLoop() : v.play()).catch(() => {});
+      // WebKit often brings the picture back frozen; check early instead of
+      // waiting for the watchdog, so a return never shows a stuck frame
+      const back = performance.now();
+      setTimeout(() => {
+        if (v.requestVideoFrameCallback && current() === v && !v.paused && shownAt.get(v) <= back) unfreeze(v);
+      }, 400);
     });
 
     // phones never preload video, so a muted play-and-pause fetches the files
