@@ -771,3 +771,21 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
    playing while hidden */
 .hero-tile .v-still { transition: opacity 300ms var(--ease-out); }
 .hero-tile.playing .v-still, .hero-tile.looping .v-still { opacity: 0; }
+
+/* ---------- round 19: reveals the GPU can run ---------- */
+/* the wipe used to animate clip-path, which repaints the whole picture every
+   frame; a cover in the page colour now shrinks away upwards instead (same
+   geometry, timing and easing), which the compositor moves without repainting */
+/* isolation keeps the look clip-path had: it isolated the figure, so the
+   multiplied image shows its own white ground rather than the page tone */
+.js [data-in="wipe"], .js [data-in="wipe"].in { clip-path: none; position: relative; isolation: isolate; transition: none; }
+.js [data-in="wipe"]::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: var(--bg); transform-origin: 50% 0;
+  transition: transform 1600ms var(--ease-in-out), visibility 0s 1600ms;
+}
+.js [data-in="wipe"].in::after { transform: scaleY(0); visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .js [data-in="wipe"]::after { content: none; } }
+/* layers that have faded out stop being composited for the rest of the visit */
+.hero-tile.playing .v-still, .hero-tile.looping .v-still { visibility: hidden; transition: opacity 300ms var(--ease-out), visibility 0s 300ms; }
+.hero-tile.looping .v-intro { visibility: hidden; transition: opacity 700ms var(--ease-out), visibility 0s 700ms; }

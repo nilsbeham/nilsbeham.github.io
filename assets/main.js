@@ -66,8 +66,11 @@ document.querySelectorAll(".slope .ln").forEach((p) => p.style.setProperty("--le
 const io = new IntersectionObserver(
   (entries) => entries.forEach((e) => {
     if (!e.isIntersecting) return;
-    e.target.classList.add("in");
     io.unobserve(e.target);
+    // a picture reveals only once it is decoded, so its fade or wipe never
+    // starts on a blank or half-drawn image or stalls while a phone decodes it
+    const imgs = [...e.target.querySelectorAll("img")];
+    Promise.all(imgs.map((img) => img.decode().catch(() => {}))).then(() => e.target.classList.add("in"));
   }),
   { rootMargin: "0px 0px -12% 0px" }
 );
@@ -83,6 +86,19 @@ if (bar) {
   addEventListener("scroll", upd, { passive: true });
   upd();
 }
+
+/* ---------- page changes: fetch a page as soon as the visitor shows intent ---------- */
+// hovering, touching or tabbing to a link starts loading its page, so by the
+// click it usually comes from the cache and the change feels immediate
+const warmed = new Set();
+const warm = (e) => {
+  const a = e.target.closest?.("a[href]");
+  if (!a || a.origin !== location.origin || !a.pathname.endsWith(".html") || a.pathname === location.pathname) return;
+  if (warmed.has(a.pathname)) return;
+  warmed.add(a.pathname);
+  fetch(a.pathname).catch(() => warmed.delete(a.pathname));
+};
+["pointerover", "touchstart", "focusin"].forEach((t) => addEventListener(t, warm, { passive: true }));
 
 document.querySelectorAll("[data-year]").forEach((el) => (el.textContent = new Date().getFullYear()));
 
@@ -156,14 +172,15 @@ if (hero) {
     // the loop file runs at the calm pace (15 s per cycle); the first cycle
     // plays at a medium 12 s pace, then eases down once the visitor stays
     const FIRST_RATE = 15 / 12;
+    // a few small steps rather than one per frame: each rate change goes to
+    // the platform's video player, and hundreds of them can make it hitch
     const easeLoopDown = () => {
       const t0 = performance.now();
-      const step = (now) => {
-        const p = Math.min(1, (now - t0) / 5000);
+      const step = setInterval(() => {
+        const p = Math.min(1, (performance.now() - t0) / 5000);
         loop.playbackRate = FIRST_RATE + (1 - FIRST_RATE) * (1 - Math.pow(1 - p, 3));
-        if (p < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
+        if (p === 1) clearInterval(step);
+      }, 250);
     };
     let lastT = 0;
     const onWrap = () => {
