@@ -10,14 +10,18 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Fine-tuning and fusion: Nils Beham">
 <meta property="og:description" content="B.Sc. thesis by Nils Beham: fine-tuning Boltz-2 and three other models for protein–peptide binding-affinity prediction, then fusing their scores.">
-<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<meta property="og:url" content="https://nilsbeham.com/projects/fine-tuning-and-fusion.html">
+<meta property="og:image" content="https://nilsbeham.com/assets/og-wide.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../favicon.ico" sizes="16x16 32x32 48x48">
-<link rel="icon" href="../assets/favicon.svg?v=20261027110930" type="image/svg+xml">
-<link rel="icon" href="../assets/icon-192.png?v=20261027110930" type="image/png" sizes="192x192">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=20261027110930">
+<link rel="icon" href="../assets/favicon.svg?v=ad8c16eaee" type="image/svg+xml">
+<link rel="icon" href="../assets/icon-192.png?v=88d17ffa8a" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=b1b4710e21">
 <script>document.documentElement.classList.add("js", "loading")</script>
 <link rel="preload" href="../assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../assets/style.css?v=20261027110930">
+<link rel="stylesheet" href="../assets/style.css?v=093c738e6c">
 <script>
   // show the page only once its typeface is ready, so text never reflows
   // from a fallback font after first paint (capped so a slow network still renders)
@@ -28,20 +32,22 @@
     setTimeout(done, 1500);
   })();
 </script>
-<script src="../assets/main.js?v=20261027110930" defer></script>
+<script src="../assets/main.js?v=490e6a1085" defer></script>
 </head>
 <body>
 <header class="nav">
   <a class="wordmark" href="../index.html">Nils Beham</a>
+  <nav aria-label="Main">
   <ul>
     <li><a href="../about.html">About</a></li>
     <li><a href="../research.html" aria-current="page">Research &amp; Projects</a></li>
     <li><a href="../writing.html">Blog</a></li>
     <li><a href="../cv.html">CV</a></li>
   </ul>
-  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+  </nav>
+  <button class="menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu">Menu</button>
 </header>
-<div class="sheet" role="dialog" aria-label="Menu">
+<div class="sheet" id="menu" role="dialog" aria-modal="true" aria-label="Menu">
   <div class="sheet-top"><a class="wordmark" href="../index.html">Nils Beham</a><button>Close</button></div>
   <ul>
     <li><a href="../index.html">Home</a></li>
@@ -82,7 +88,7 @@
     </div>
     <div class="fig-pair">
       <figure class="fig wide" data-in="wipe">
-        <img src="../assets/pose-b.jpg?v=20261027110930" alt="Three panels: a grey receptor ribbon with the bound macrocycle from the front and rotated 150 degrees, then the macrocycle alone. Crystal pose in orange, prediction in green, almost overlapping." width="2000" height="891" loading="lazy">
+        <img src="../assets/pose-b.jpg?v=c03a8cbd2b" alt="Three panels: a grey receptor ribbon with the bound macrocycle from the front and rotated 150 degrees, then the macrocycle alone. Crystal pose in orange, prediction in green, almost overlapping." width="2000" height="891" loading="lazy">
         <figcaption>Prediction with the peptide encoded as residues (green) against the crystal structure (orange), PDB&nbsp;1BCK.</figcaption>
       </figure>
     </div>
@@ -97,7 +103,7 @@
     </div>
     <div class="fig-pair">
       <figure class="fig narrow" data-in="wipe">
-        <img src="../assets/parity.jpg?v=20261027110930" alt="Scatter plot of predicted against experimental affinity for the fused score, Pearson r 0.573, Spearman rho 0.567" width="1400" height="1225" loading="lazy">
+        <img src="../assets/parity.jpg?v=e5945047ca" alt="Scatter plot of predicted against experimental affinity for the fused score, Pearson r 0.573, Spearman rho 0.567" width="1400" height="1225" loading="lazy">
         <figcaption>Fused score against experiment on the test set, in kcal/mol.</figcaption>
       </figure>
       <div class="note prose measure" data-in>
@@ -111,7 +117,7 @@
   <section class="sec grid">
     <h2 class="c-full" data-in style="margin-bottom:56px">One fused score</h2>
     <figure class="fig chart-wrap" data-in>
-      <svg class="slope" viewBox="0 0 820 520" role="img" aria-labelledby="slope-t">
+      <svg class="slope" viewBox="0 0 820 520" role="group" aria-labelledby="slope-t">
         <title id="slope-t">Test-set Pearson r before and after fine-tuning. Fusion 0.435 to 0.573, GEMS 0.374 to 0.440, Boltz-2 SMILES 0.260 to 0.443, Boltz-2 residue 0.063 to 0.435, PLM 0.187 to 0.341.</title>
         <g>
           <line class="tick" x1="110" x2="600" y1="470" y2="470"/><text class="tl" x="96" y="474" text-anchor="end">0.0</text>
@@ -126,35 +132,35 @@
           <text class="col" x="190" y="504" text-anchor="middle">untuned</text>
           <text class="col" x="540" y="504" text-anchor="middle">fine-tuned</text>
         </g>
-        <g class="series" tabindex="0" style="--k:1" aria-label="GEMS (graph network): 0.374 untuned, 0.440 fine-tuned">
+        <g class="series" role="img" tabindex="0" style="--k:1" aria-label="GEMS (graph network): 0.374 untuned, 0.440 fine-tuned">
           <path class="hit" d="M190 208.2 L540 162"/>
           <path class="ln" d="M190 208.2 L540 162"/>
           <g class="end"><circle class="dot" cx="190" cy="208.2" r="4"/><circle class="dot" cx="540" cy="162" r="4"/>
           <text class="val" x="176" y="213" text-anchor="end">0.374</text>
           <text class="lab" x="556" y="140"><tspan class="val">0.440</tspan>  GEMS (graph network)</text></g>
         </g>
-        <g class="series" tabindex="0" style="--k:2" aria-label="Boltz-2, SMILES: 0.260 untuned, 0.443 fine-tuned">
+        <g class="series" role="img" tabindex="0" style="--k:2" aria-label="Boltz-2, SMILES: 0.260 untuned, 0.443 fine-tuned">
           <path class="hit" d="M190 288 L540 159.9"/>
           <path class="ln" d="M190 288 L540 159.9"/>
           <g class="end"><circle class="dot" cx="190" cy="288" r="4"/><circle class="dot" cx="540" cy="159.9" r="4"/>
           <text class="val" x="176" y="293" text-anchor="end">0.260</text>
           <text class="lab" x="556" y="163"><tspan class="val">0.443</tspan>  Boltz-2, SMILES</text></g>
         </g>
-        <g class="series" tabindex="0" style="--k:3" aria-label="Boltz-2, residues: 0.063 untuned, 0.435 fine-tuned">
+        <g class="series" role="img" tabindex="0" style="--k:3" aria-label="Boltz-2, residues: 0.063 untuned, 0.435 fine-tuned">
           <path class="hit" d="M190 425.9 L540 165.5"/>
           <path class="ln" d="M190 425.9 L540 165.5"/>
           <g class="end"><circle class="dot" cx="190" cy="425.9" r="4"/><circle class="dot" cx="540" cy="165.5" r="4"/>
           <text class="val" x="176" y="431" text-anchor="end">0.063</text>
           <text class="lab" x="556" y="186"><tspan class="val">0.435</tspan>  Boltz-2, residues</text></g>
         </g>
-        <g class="series" tabindex="0" style="--k:4" aria-label="PLM (sequence only): 0.187 untuned, 0.341 fine-tuned">
+        <g class="series" role="img" tabindex="0" style="--k:4" aria-label="PLM (sequence only): 0.187 untuned, 0.341 fine-tuned">
           <path class="hit" d="M190 339.1 L540 231.3"/>
           <path class="ln" d="M190 339.1 L540 231.3"/>
           <g class="end"><circle class="dot" cx="190" cy="339.1" r="4"/><circle class="dot" cx="540" cy="231.3" r="4"/>
           <text class="val" x="176" y="344" text-anchor="end">0.187</text>
           <text class="lab" x="556" y="236"><tspan class="val">0.341</tspan>  PLM (sequence only)</text></g>
         </g>
-        <g class="series" tabindex="0" style="--k:0" aria-label="Fusion of all four: 0.435 untuned, 0.573 fine-tuned">
+        <g class="series" role="img" tabindex="0" style="--k:0" aria-label="Fusion of all four: 0.435 untuned, 0.573 fine-tuned">
           <path class="hit" d="M190 165.5 L540 68.9"/>
           <path class="ln hl" d="M190 165.5 L540 68.9"/>
           <g class="end"><circle class="dot hl" cx="190" cy="165.5" r="5.5"/><circle class="dot hl" cx="540" cy="68.9" r="5.5"/>

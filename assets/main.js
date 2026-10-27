@@ -16,12 +16,21 @@ function whenShown(cb) {
 
 /* ---------- mobile menu ---------- */
 const sheet = document.querySelector(".sheet");
-document.querySelector(".menu-btn")?.addEventListener("click", () => {
-  sheet.classList.add("open");
-  sheet.querySelector("button").focus();
-});
-sheet?.querySelector("button").addEventListener("click", () => sheet.classList.remove("open"));
-addEventListener("keydown", (e) => e.key === "Escape" && sheet?.classList.remove("open"));
+const menuBtn = document.querySelector(".menu-btn");
+// while the sheet is open the page behind it is inert, so keyboard focus and
+// screen readers stay in the menu; closing hands focus back to the Menu button
+const setMenu = (open, focus = true) => {
+  if (!sheet || sheet.classList.contains("open") === open) return;
+  sheet.classList.toggle("open", open);
+  menuBtn.setAttribute("aria-expanded", String(open));
+  document.querySelectorAll("body > :not(.sheet)").forEach((el) => (el.inert = open));
+  if (focus) (open ? sheet.querySelector("button") : menuBtn).focus();
+};
+menuBtn?.addEventListener("click", () => setMenu(true));
+sheet?.querySelector("button").addEventListener("click", () => setMenu(false));
+addEventListener("keydown", (e) => e.key === "Escape" && setMenu(false));
+// a page left through the menu comes back from the back/forward cache closed
+addEventListener("pagehide", () => setMenu(false, false));
 
 /* ---------- split text into glyph spans ---------- */
 function split(el) {
@@ -54,7 +63,9 @@ function addGlyph(parent, ch, i, cls = "g") {
 const pageTitle = document.querySelector(".page-head h1");
 if (pageTitle) {
   const titleGlyphs = split(pageTitle);
-  titleGlyphs.at(-1).addEventListener("animationend", () => pageTitle.classList.add("done"), { once: true });
+  titleGlyphs[titleGlyphs.length - 1].addEventListener("animationend", () => pageTitle.classList.add("done"), { once: true });
+  // without motion there is no animationend; release the glyph layers at once
+  if (reduced) pageTitle.classList.add("done");
   whenShown(() => requestAnimationFrame(() => pageTitle.classList.add("play")));
 }
 
@@ -69,8 +80,10 @@ const io = new IntersectionObserver(
     io.unobserve(e.target);
     // a picture reveals only once it is decoded, so its fade or wipe never
     // starts on a blank or half-drawn image or stalls while a phone decodes it
+    // (a request that hangs without failing reveals after 8 s regardless)
     const imgs = [...e.target.querySelectorAll("img")];
-    Promise.all(imgs.map((img) => img.decode().catch(() => {}))).then(() => e.target.classList.add("in"));
+    Promise.race([Promise.all(imgs.map((img) => img.decode().catch(() => {}))), wait(8000)])
+      .then(() => e.target.classList.add("in"));
   }),
   { rootMargin: "0px 0px -12% 0px" }
 );
@@ -134,19 +147,21 @@ if (hero) {
     caret.style.opacity = "0";
   }
 
+  let shownRole = "";
+  const setRole = (t) => (roleText.textContent = shownRole = t);
   async function cycleRoles() {
     for (let i = 0; ; i++) {
       const word = roles[i % roles.length];
       roleCaret.classList.remove("blink");
       for (let k = 1; k <= word.length; k++) {
-        roleText.textContent = word.slice(0, k);
+        setRole(word.slice(0, k));
         await wait(65 + Math.random() * 45);
       }
       roleCaret.classList.add("blink");
       await wait(3000);
       roleCaret.classList.remove("blink");
       for (let k = word.length; k >= 0; k--) {
-        roleText.textContent = word.slice(0, k);
+        setRole(word.slice(0, k));
         await wait(32);
       }
       await wait(450);
@@ -165,7 +180,7 @@ if (hero) {
     caret.remove();
     roleText.textContent = roles[0];
     roleText.classList.add("live");
-    hero.classList.add("ready");
+    hero.classList.add("ready", "settled");
   } else {
     // the intro pulls focus once; the loop starts on its exact last frame and
     // keeps breathing between soft and sharper, so the hero never freezes
@@ -240,11 +255,12 @@ if (hero) {
     // be moving is checked, and restarted if it is not
     // when each video last put a frame on screen: a picture can freeze while
     // the clock keeps running, which the clock alone cannot show
-    const shownAt = new Map();
+    const shownAt = new Map(), shownTime = new Map();
     const trackFrames = (v) => {
       if (!v.requestVideoFrameCallback) return;
-      const onFrame = () => {
+      const onFrame = (now, meta) => {
         shownAt.set(v, performance.now());
+        shownTime.set(v, meta.mediaTime);
         v.requestVideoFrameCallback(onFrame);
       };
       v.requestVideoFrameCallback(onFrame);
@@ -265,11 +281,16 @@ if (hero) {
       if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
       const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
       if (v.paused) return restart();
-      // the clock runs but no frame has reached the screen for 1.5 s: a seek
-      // of a full second wakes the picture (small ones do not); backwards,
-      // so it lands close to the frame that froze
+      // the clock runs but no frame has reached the screen for 1.5 s: a big
+      // seek wakes the picture (small ones do not). It goes back to the frame
+      // that froze when that is far enough away, so playback carries on from
+      // there; lastT is moved too, so the loop does not take it for its wrap
       if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) {
-        v.currentTime = v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
+        const frozenAt = shownTime.get(v);
+        const to = frozenAt !== undefined && Math.abs(v.currentTime - frozenAt) >= BIG_SEEK ? frozenAt
+          : v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
+        if (v === loop) lastT = to;
+        v.currentTime = to;
         shownAt.set(v, performance.now());
       }
       if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= 2) {
@@ -388,7 +409,33 @@ if (hero) {
     // staged: the still, blurred tile fades in, then the focus pull and the
     // typed name start together, the first role follows, and the rest of the
     // column settles in last
-    document.fonts.ready.then(async () => {
+    // a page opened in a background tab starts its entrance when first seen
+    const visible = () => new Promise((resolve) => {
+      if (document.visibilityState === "visible") return resolve();
+      const onShow = () => {
+        if (document.visibilityState !== "visible") return;
+        document.removeEventListener("visibilitychange", onShow);
+        resolve();
+      };
+      document.addEventListener("visibilitychange", onShow);
+    });
+    // the longest role wraps onto two lines on narrow screens; reserve the
+    // tallest role's height so the column below never jumps as roles change.
+    // Measured in one task (nothing paints in between) and again on resize
+    const role = roleText.parentElement;
+    const reserveRole = () => {
+      role.style.minHeight = "";
+      let tallest = 0;
+      for (const r of roles) {
+        roleText.textContent = r;
+        tallest = Math.max(tallest, role.getBoundingClientRect().height);
+      }
+      roleText.textContent = shownRole;
+      role.style.minHeight = `${tallest}px`;
+    };
+    document.fonts.ready.then(visible).then(async () => {
+      reserveRole();
+      addEventListener("resize", reserveRole);
       hero.classList.add("tile-in");
       requestAnimationFrame(() => requestAnimationFrame(painted));
       await wait(700);
@@ -422,7 +469,7 @@ if (counters.length && !reduced) {
     setTimeout(() => {
       const t0 = performance.now();
       const step = (now) => {
-        const p = Math.min(1, (now - t0) / 1400);
+        const p = Math.max(0, Math.min(1, (now - t0) / 1400));
         const eased = 1 - Math.pow(1 - p, 4);
         el.textContent = (target * eased).toFixed(digits);
         if (p < 1) requestAnimationFrame(step);
@@ -467,8 +514,12 @@ document.querySelectorAll("[data-copy]").forEach((btn) => {
 /* ---------- rotating interests: words cross-fade in place ---------- */
 document.querySelectorAll(".rotate").forEach((el) => {
   const words = JSON.parse(el.dataset.words);
-  el.setAttribute("aria-label", el.textContent);
+  // screen readers ignore aria-label on a plain span; give them hidden text
+  const said = document.createElement("span");
+  said.className = "sr-only";
+  said.textContent = el.textContent;
   el.textContent = "";
+  el.appendChild(said);
   // all words share one grid cell, so the line never resizes or jumps
   const spans = words.map((w) => {
     const s = document.createElement("span");
@@ -500,24 +551,30 @@ document.querySelectorAll("[data-type]").forEach((el) => {
   if (reduced) return;
   const text = el.dataset.type;
   const caret = el.querySelector(".r-caret");
-  el.setAttribute("aria-label", text);
-  el.firstChild.textContent = "";
+  const typed = document.createElement("span");
+  typed.setAttribute("aria-hidden", "true");
+  el.firstChild.replaceWith(typed);
+  const said = document.createElement("span");
+  said.className = "sr-only";
+  said.textContent = text;
+  el.prepend(said);
   const tio = new IntersectionObserver(async ([e]) => {
     if (!e.isIntersecting) return;
     tio.disconnect();
     caret.classList.remove("blink");
     await wait(300);
     for (let k = 1; k <= text.length; k++) {
-      el.firstChild.textContent = text.slice(0, k);
+      typed.textContent = text.slice(0, k);
       await wait(70 + Math.random() * 50);
     }
     caret.classList.add("blink");
   }, { rootMargin: "0px 0px -20% 0px" });
-  tio.observe(el);
+  // the font gate may still hide the page; typing waits until it shows
+  whenShown(() => tio.observe(el));
 });
 
 /* ---------- about: timeline + reading focus ---------- */
-document.querySelectorAll("[data-tl]").forEach((el) => io.observe(el));
+whenShown(() => document.querySelectorAll("[data-tl]").forEach((el) => io.observe(el)));
 const focusables = document.querySelectorAll("[data-focus]");
 if (focusables.length) {
   const fio = new IntersectionObserver((entries) => entries.forEach((e) => e.target.classList.toggle("focus", e.isIntersecting)),

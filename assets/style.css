@@ -789,3 +789,9 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 /* layers that have faded out stop being composited for the rest of the visit */
 .hero-tile.playing .v-still, .hero-tile.looping .v-still { visibility: hidden; transition: opacity 300ms var(--ease-out), visibility 0s 300ms; }
 .hero-tile.looping .v-intro { visibility: hidden; transition: opacity 700ms var(--ease-out), visibility 0s 700ms; }
+
+/* ---------- round 20: review fixes ---------- */
+/* text for screen readers only, beside a visual effect that hides it */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* the accent focus ring is invisible on the accent-blue field */
+.field :focus-visible { outline-color: var(--field-ink); }

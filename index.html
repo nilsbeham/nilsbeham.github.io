@@ -10,14 +10,18 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Nils Beham">
 <meta property="og:description" content="Nils Beham studies Physics and Management and Technology at the Technical University of Munich, with a strong interest in AI safety, biosecurity and AI security. His thesis fine-tuned Boltz-2 to predict protein–peptide binding affinity.">
-<meta property="og:image" content="https://nilsbeham.com/assets/og.jpg">
+<meta property="og:url" content="https://nilsbeham.com/">
+<meta property="og:image" content="https://nilsbeham.com/assets/og-wide.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
-<link rel="icon" href="assets/favicon.svg?v=20261027110930" type="image/svg+xml">
-<link rel="icon" href="assets/icon-192.png?v=20261027110930" type="image/png" sizes="192x192">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261027110930">
+<link rel="icon" href="assets/favicon.svg?v=ad8c16eaee" type="image/svg+xml">
+<link rel="icon" href="assets/icon-192.png?v=88d17ffa8a" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=b1b4710e21">
 <script>document.documentElement.classList.add("js", "loading")</script>
 <link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/style.css?v=20261027110930">
+<link rel="stylesheet" href="assets/style.css?v=093c738e6c">
 <script>
   // show the page only once its typeface is ready, so text never reflows
   // from a fallback font after first paint (capped so a slow network still renders)
@@ -28,20 +32,22 @@
     setTimeout(done, 1500);
   })();
 </script>
-<script src="assets/main.js?v=20261027110930" defer></script>
+<script src="assets/main.js?v=490e6a1085" defer></script>
 </head>
 <body>
 <header class="nav">
   <a class="wordmark" href="index.html">Nils Beham</a>
+  <nav aria-label="Main">
   <ul>
     <li><a href="about.html">About</a></li>
     <li><a href="research.html">Research &amp; Projects</a></li>
     <li><a href="writing.html">Blog</a></li>
     <li><a href="cv.html">CV</a></li>
   </ul>
-  <button class="menu-btn" aria-haspopup="dialog">Menu</button>
+  </nav>
+  <button class="menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu">Menu</button>
 </header>
-<div class="sheet" role="dialog" aria-label="Menu">
+<div class="sheet" id="menu" role="dialog" aria-modal="true" aria-label="Menu">
   <div class="sheet-top"><a class="wordmark" href="index.html">Nils Beham</a><button>Close</button></div>
   <ul>
     <li><a href="index.html" aria-current="page">Home</a></li>
@@ -70,12 +76,12 @@
       </ul>
     </div>
     <div class="hero-tile">
-      <img class="v-img v-still" src="assets/hero-first.jpg?v=20261027110930" alt="" aria-hidden="true">
+      <img class="v-img v-still" src="assets/hero-first.jpg?v=059ef26a84" alt="" aria-hidden="true">
       <video class="v-loop" muted playsinline loop preload="auto" aria-hidden="true">
-        <source src="assets/hero-loop.mp4?v=20261027110930" type="video/mp4">
+        <source src="assets/hero-loop.mp4?v=b63901d0e7" type="video/mp4">
       </video>
-      <video class="v-intro" muted playsinline preload="auto" poster="assets/hero-first.jpg?v=20261027110930" data-still="assets/hero-last.jpg?v=20261027110930" aria-hidden="true">
-        <source src="assets/hero.mp4?v=20261027110930" type="video/mp4">
+      <video class="v-intro" muted playsinline preload="auto" poster="assets/hero-first.jpg?v=059ef26a84" data-still="assets/hero-last.jpg?v=0dd052b90c" aria-hidden="true">
+        <source src="assets/hero.mp4?v=f52774efad" type="video/mp4">
       </video>
     </div>
   </section>
