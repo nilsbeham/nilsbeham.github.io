@@ -281,7 +281,7 @@ if (hero) {
     };
     trackFrames(video);
     trackFrames(loop);
-    let lastSeen = -1, frozen = 0, watched = null;
+    let lastSeen = -1, frozen = 0, watched = null, lastHeal = performance.now();
     // grace for a video that just became the one to watch (or a page that
     // just became visible again): it has not had the chance to draw yet
     const rearm = () => {
@@ -297,18 +297,35 @@ if (hero) {
       shownAt.set(v, performance.now());
     };
     const heal = () => {
+      // a late tick means the page's main thread was busy: iOS kept drawing
+      // the video outside the page, but no frame callback could arrive, which
+      // must not read as a frozen picture (it seeked healthy videos backwards)
+      const late = performance.now() - lastHeal > 1500;
+      lastHeal = performance.now();
       const v = current();
       if (!v || document.hidden) return;
-      if (v !== watched) rearm();
+      if (v !== watched || late) rearm();
       if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
       const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
       if (v.paused) return restart();
+      // a pending seek holds the clock and the picture still; that is not a
+      // freeze, so nothing restarts the video meanwhile (iOS once took 13 s to
+      // land a seek while being restarted). The picture gets a fresh grace
+      if (v.seeking) {
+        shownAt.set(v, performance.now());
+        frozen = 0;
+        lastSeen = v.currentTime;
+        return;
+      }
       // the clock runs but no frame has reached the screen for 1.5 s: a big
       // seek wakes the picture (small ones do not). It goes back to the frame
       // that froze when that is far enough away, so playback carries on from
       // there; lastT is moved too, so the loop does not take it for its wrap
       if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) unfreeze(v);
-      if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= 2) {
+      // a stopped clock counts only once the data is there: iOS reports a
+      // video still waiting for the network as able to play (readyState 3),
+      // and pausing and restarting it then only restarts the wait
+      if (v.readyState >= 4 && v.currentTime === lastSeen && ++frozen >= 2) {
         frozen = 0;
         v.pause();
         restart();
@@ -343,7 +360,10 @@ if (hero) {
     // long before it matters
     // no rewind afterwards: the playhead moves a few hundredths of a second at
     // most, where the picture is at rest, and a small seek could freeze it
-    const prime = (v) => v.play().then(() => {
+    // the pause waits for a drawn frame: paused right as it reports playing,
+    // WebKit on iOS can leave the video unable to start again (the loop then
+    // reported playing at the handover but held its first frame for 2.5 s)
+    const prime = (v) => v.play().then(() => firstFrame(v)).then(() => {
       // a real start may have come first; only pause a video still waiting
       if (v !== current()) v.pause();
     });
