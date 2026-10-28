@@ -806,3 +806,14 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
    break mid-word ("gmail.co / m"); it now shrinks just enough to fit there,
    and wider screens keep the clamp as before */
 .close .mail { font-size: min(clamp(2.25rem, 0.6rem + 6.6vw, 8.5rem), calc((100vw - 2 * var(--m)) / 11)); }
+
+/* ---------- round 22: phones: black behind Safari's status bar on the home page ---------- */
+/* iOS Safari fills the strip above the page with the body's background
+   (theme-color and the html background are ignored). On the home page the body
+   turns black and the page colour moves to html (canvas, overscroll, loading
+   screen) and main, so everything else is painted exactly as before */
+@media (max-width: 860px) {
+  html:has(.hero) { background: var(--bg); }
+  body:has(.hero) { background: var(--tile); }
+  body:has(.hero) main { background: var(--bg); }
+}
