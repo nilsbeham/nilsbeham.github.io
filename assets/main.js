@@ -134,6 +134,11 @@ if (hero) {
   const video = hero.querySelector(".v-intro");
   const loop = hero.querySelector(".v-loop");
   const tile = hero.querySelector(".hero-tile");
+  // phones: Safari colours its bars from the body's background, which is black
+  // while the hero is in view (style.css round 22); once the hero has scrolled
+  // away the body takes the page colour again, so the bottom bar at the end of
+  // the page stays light
+  new IntersectionObserver(([e]) => root.classList.toggle("past-hero", !e.isIntersecting)).observe(tile);
   const name = hero.querySelector(".name");
   const roleText = hero.querySelector(".role-text");
   const roleCaret = hero.querySelector(".r-caret");
@@ -281,7 +286,7 @@ if (hero) {
     };
     trackFrames(video);
     trackFrames(loop);
-    let lastSeen = -1, frozen = 0, watched = null, lastHeal = performance.now();
+    let lastSeen = -1, frozen = 0, watched = null, lastHeal = performance.now(), away = false, seekTicks = 0;
     // grace for a video that just became the one to watch (or a page that
     // just became visible again): it has not had the chance to draw yet
     const rearm = () => {
@@ -303,20 +308,26 @@ if (hero) {
       const late = performance.now() - lastHeal > 1500;
       lastHeal = performance.now();
       const v = current();
+      // the first tick back from a hidden page can run before its
+      // visibilitychange handler; it must not judge frames from before
+      if (document.hidden) away = true;
       if (!v || document.hidden) return;
-      if (v !== watched || late) rearm();
+      if (v !== watched || late || away) rearm();
+      away = false;
       if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
       const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
       if (v.paused) return restart();
       // a pending seek holds the clock and the picture still; that is not a
       // freeze, so nothing restarts the video meanwhile (iOS once took 13 s to
-      // land a seek while being restarted). The picture gets a fresh grace
-      if (v.seeking) {
+      // land a seek while being restarted). The picture gets a fresh grace;
+      // a seek that has not landed after 5 s is left to the checks below
+      if (v.seeking && ++seekTicks <= 5) {
         shownAt.set(v, performance.now());
         frozen = 0;
         lastSeen = v.currentTime;
         return;
       }
+      if (!v.seeking) seekTicks = 0;
       // the clock runs but no frame has reached the screen for 1.5 s: a big
       // seek wakes the picture (small ones do not). It goes back to the frame
       // that froze when that is far enough away, so playback carries on from
@@ -324,8 +335,9 @@ if (hero) {
       if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) unfreeze(v);
       // a stopped clock counts only once the data is there: iOS reports a
       // video still waiting for the network as able to play (readyState 3),
-      // and pausing and restarting it then only restarts the wait
-      if (v.readyState >= 4 && v.currentTime === lastSeen && ++frozen >= 2) {
+      // and pausing and restarting it then only restarts the wait; one stuck
+      // there for 6 s is restarted anyway
+      if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= (v.readyState >= 4 ? 2 : 6)) {
         frozen = 0;
         v.pause();
         restart();
