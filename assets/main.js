@@ -137,8 +137,31 @@ if (hero) {
   // phones: Safari colours its bars from the body's background, which is black
   // while the hero is in view (style.css round 22); once the hero has scrolled
   // away the body takes the page colour again, so the bottom bar at the end of
-  // the page stays light
-  new IntersectionObserver(([e]) => root.classList.toggle("past-hero", !e.isIntersecting)).observe(tile);
+  // the page stays light. A reload or Back shows the page where it was left
+  // before the page learns its scroll position (one from the back/forward
+  // cache first reports the top), so until 300 ms after it is shown the class
+  // keeps what it was when the page was left (kept in history.state);
+  // otherwise the bottom bar flashed black
+  let heroInView = true, holdUntil = 0;
+  const showPast = () => {
+    if (performance.now() < holdUntil || root.classList.contains("past-hero") === !heroInView) return;
+    root.classList.toggle("past-hero", !heroInView);
+    history.replaceState({ ...history.state, pastHero: !heroInView }, "");
+  };
+  const hold = () => {
+    holdUntil = performance.now() + 300;
+    setTimeout(showPast, 310);
+  };
+  if (["reload", "back_forward"].includes(performance.getEntriesByType("navigation")[0]?.type) && history.state?.pastHero) {
+    root.classList.add("past-hero");
+    holdUntil = Infinity;
+    addEventListener("load", hold);
+  }
+  addEventListener("pageshow", (e) => e.persisted && hold());
+  new IntersectionObserver(([e]) => {
+    heroInView = e.isIntersecting;
+    showPast();
+  }).observe(tile);
   const name = hero.querySelector(".name");
   const roleText = hero.querySelector(".role-text");
   const roleCaret = hero.querySelector(".r-caret");
