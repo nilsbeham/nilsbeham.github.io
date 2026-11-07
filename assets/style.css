@@ -518,23 +518,6 @@ h1, h2, h3 { text-wrap: balance; }
 .form-status, .form-note { margin: 0; font-size: var(--step-small); color: var(--muted); }
 .form-status:empty { display: none; }
 
-.soon-wide h2 { font-size: var(--step-display); letter-spacing: -0.05em; line-height: 0.9; color: var(--ink); }
-.soon-wide p:last-child { max-width: 20.74em; }
-.soon h2 .r-caret { display: inline-block; width: 0.06em; min-width: 3px; height: 0.78em; margin-left: 0.06em; background: var(--accent); vertical-align: -0.04em; }
-
-.project-img img { transition: transform 600ms var(--ease-out); will-change: transform; }
-
-.copy {
-  grid-column: 1 / -1; justify-self: start; margin-top: 24px;
-  font: inherit; font-weight: 600; font-size: var(--step-small);
-  background: none; color: var(--ink); border: 1.5px solid var(--ink);
-  min-height: 44px; padding: 0 18px; cursor: pointer;
-  transition: background 180ms var(--ease-out), color 180ms var(--ease-out), transform 140ms var(--ease-out);
-}
-.copy:hover { background: var(--ink); color: var(--bg); }
-.copy:active { transform: scale(0.97); }
-.copy.done { background: var(--accent); border-color: var(--accent); color: #fff; }
-
 .soon-wide h2 { grid-column: 1 / -1; }
 .soon-wide p:last-child { grid-column: 1 / 7; margin-top: 28px; }
 @media (max-width: 860px) { .soon-wide p:last-child { grid-column: 1 / -1; } }
@@ -822,10 +805,6 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 .sheet.open { transition: clip-path 420ms var(--ease-in-out), visibility 0s; }
 /* white under the nav's difference blend: dark on the page, white over the video */
 .nav :focus-visible { outline-color: #fff; }
-/* the address stays on one line: on narrow phones the 36 px floor made it
-   break mid-word ("address"); it now shrinks just enough to fit there,
-   and wider screens keep the clamp as before */
-.close .mail { font-size: min(clamp(2.25rem, 0.6rem + 6.6vw, 8.5rem), calc((100vw - 2 * var(--m)) / 11)); }
 
 /* ---------- round 22: phones: black behind Safari's status bar on the home page ---------- */
 /* iOS Safari fills the strip above the page with the body's background

@@ -588,7 +588,7 @@ document.querySelector(".contact")?.addEventListener("submit", async (e) => {
     form.reset();
     status.textContent = "Sent. Thank you!";
   } catch (err) {
-    status.textContent = "That did not send. Please reach me on LinkedIn instead.";
+    status.innerHTML = 'That did not send. Please reach me on <a href="https://www.linkedin.com/in/nilsbeham/" target="_blank" rel="noopener">LinkedIn</a> instead.';
     console.error(err);
   } finally {
     btn.disabled = false;
