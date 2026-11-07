@@ -28,6 +28,7 @@ const setMenu = (open, focus = true) => {
 };
 menuBtn?.addEventListener("click", () => setMenu(true));
 sheet?.querySelector("button").addEventListener("click", () => setMenu(false));
+sheet?.querySelector('a[href="#contact"]').addEventListener("click", () => setMenu(false, false));
 addEventListener("keydown", (e) => e.key === "Escape" && setMenu(false));
 // a page left through the menu comes back from the back/forward cache closed
 addEventListener("pagehide", () => setMenu(false, false));
@@ -572,20 +573,26 @@ if (!reduced && matchMedia("(hover: hover)").matches) {
   });
 }
 
-/* ---------- copy email ---------- */
-document.querySelectorAll("[data-copy]").forEach((btn) => {
-  const label = btn.textContent;
-  btn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(btn.dataset.copy);
-      btn.textContent = "Copied";
-      btn.classList.add("done");
-    } catch (err) {
-      btn.textContent = "Copy blocked by browser";
-      console.error(err);
-    }
-    setTimeout(() => { btn.textContent = label; btn.classList.remove("done"); }, 1800);
-  });
+/* ---------- contact form ---------- */
+document.querySelector(".contact")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const status = form.querySelector(".form-status");
+  const btn = form.querySelector("button");
+  btn.disabled = true;
+  status.textContent = "Sending...";
+  try {
+    const res = await fetch(form.action, { method: "POST", headers: { Accept: "application/json" }, body: new FormData(form) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    form.reset();
+    status.textContent = "Sent. Thank you!";
+  } catch (err) {
+    status.textContent = "That did not send. Please reach me on LinkedIn instead.";
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 /* ---------- rotating interests: words cross-fade in place ---------- */

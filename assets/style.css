@@ -504,6 +504,26 @@ h1, h2, h3 { text-wrap: balance; }
 
 .project-img img { transition: transform 600ms var(--ease-out); will-change: transform; }
 
+.contact { grid-column: 1 / 8; display: grid; gap: 20px; margin-top: 28px; }
+@media (max-width: 860px) { .contact { grid-column: 1 / -1; } }
+.contact label { display: grid; gap: 6px; font-size: var(--step-small); font-weight: 600; }
+.contact input, .contact textarea {
+  width: 100%; padding: 12px 14px;
+  font: inherit; font-size: max(1rem, var(--step-small)); font-weight: 400;
+  background: var(--bg); color: var(--ink); border: 1.5px solid var(--ink); border-radius: 0;
+}
+.contact textarea { resize: vertical; }
+.contact .btn { justify-self: start; border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.contact .btn:disabled { opacity: 0.6; cursor: default; }
+.form-status, .form-note { margin: 0; font-size: var(--step-small); color: var(--muted); }
+.form-status:empty { display: none; }
+
+.soon-wide h2 { font-size: var(--step-display); letter-spacing: -0.05em; line-height: 0.9; color: var(--ink); }
+.soon-wide p:last-child { max-width: 20.74em; }
+.soon h2 .r-caret { display: inline-block; width: 0.06em; min-width: 3px; height: 0.78em; margin-left: 0.06em; background: var(--accent); vertical-align: -0.04em; }
+
+.project-img img { transition: transform 600ms var(--ease-out); will-change: transform; }
+
 .copy {
   grid-column: 1 / -1; justify-self: start; margin-top: 24px;
   font: inherit; font-weight: 600; font-size: var(--step-small);
