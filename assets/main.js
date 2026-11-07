@@ -28,7 +28,6 @@ const setMenu = (open, focus = true) => {
 };
 menuBtn?.addEventListener("click", () => setMenu(true));
 sheet?.querySelector("button").addEventListener("click", () => setMenu(false));
-sheet?.querySelector('a[href="#contact"]').addEventListener("click", () => setMenu(false, false));
 addEventListener("keydown", (e) => e.key === "Escape" && setMenu(false));
 // a page left through the menu comes back from the back/forward cache closed
 addEventListener("pagehide", () => setMenu(false, false));
