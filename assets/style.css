@@ -313,7 +313,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* about */
 .portrait { grid-column: 1 / 6; margin: 0 0 0 calc(var(--m) * -1); }
-.portrait img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 20%; }
+.portrait img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 0; transform-origin: 50% 0; }
 .about-intro { grid-column: 7 / -1; align-self: end; }
 @media (max-width: 860px) {
   .portrait { grid-column: 1 / -1; margin: 0 calc(var(--m) * -1); }
