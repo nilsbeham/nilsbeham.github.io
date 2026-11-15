@@ -22,7 +22,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=b1b4710e21">
 <script>document.documentElement.classList.add("js", "loading")</script>
 <link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/style.css?v=5b85f7df7c">
+<link rel="stylesheet" href="assets/style.css?v=143501dace">
 <script>
   // show the page only once its typeface is ready, so text never reflows
   // from a fallback font after first paint (capped so a slow network still renders)
@@ -92,6 +92,20 @@
         <p class="blog-soon" data-type="Soon to come">Soon to come<span class="r-caret blink" aria-hidden="true"></span></p>
       </li>
     </ul>
+
+    <div class="minor">
+      <h2 data-in>Smaller projects</h2>
+      <ul class="minor-list">
+        <li>
+          <a href="https://github.com/nilsbeham/Neural-Network-TensorFlow-for-Classifying-Gravitational-Lenses" target="_blank" rel="noopener">
+            <h3 data-in>Spotting gravitational lenses</h3>
+            <p data-in>A small convolutional network in TensorFlow that sorts three-band, 72×72-pixel telescope cutouts into lenses and non-lenses. Trained on 20,000 FITS images, it classified 3,979 of 4,000 validation images correctly (99.5%).</p>
+            <ul class="tags" data-in><li>TensorFlow</li><li>CNN</li><li>Astropy</li></ul>
+            <span class="more" data-in>Code on GitHub <span aria-hidden="true">↗</span></span>
+          </a>
+        </li>
+      </ul>
+    </div>
   </section>
 </main>
 

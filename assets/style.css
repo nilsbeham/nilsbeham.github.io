@@ -439,7 +439,21 @@ h1, h2, h3 { text-wrap: balance; }
 .more span { display: inline-block; transition: transform 240ms var(--ease-out); }
 .project:hover .more span { transform: translateX(6px); }
 .back { grid-column: 5 / 12; margin: 20px 0 0; }
+/* smaller projects: a quiet text list below the main research */
+.minor { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); margin-top: clamp(96px, 11vw, 168px); }
+.minor > h2 { grid-column: 1 / 5; margin: 0; font-size: var(--step-lead); font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; }
+.minor-list { grid-column: 5 / 12; list-style: none; margin: 0; padding: 0; }
+.minor-list > li + li { margin-top: 48px; }
+.minor-list a { display: block; text-decoration: none; }
+.minor-list h3 { margin: 0; font-size: var(--step-lead); font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; transition: color 180ms var(--ease-out); }
+.minor-list a:hover h3 { color: var(--accent); }
+.minor-list p { margin: 10px 0 0; color: var(--muted); max-width: 37.82em; }
+.minor-list .tags { margin-top: 16px; }
+.minor-list .more { margin-top: 18px; }
+.minor-list a:hover .more span { transform: translate(3px, -3px); }
 @media (max-width: 860px) {
+  .minor > h2, .minor-list { grid-column: 1 / -1; }
+  .minor-list { margin-top: 20px; }
   .project-img, .project-txt { grid-column: 1 / -1; }
   .project-txt { margin-top: 28px; }
   .back { grid-column: 1 / -1; }
