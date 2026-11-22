@@ -268,7 +268,7 @@ if (hero) {
       // backup for a browser that never sends a frame callback: a clock that
       // has run a second while playing means a picture is being drawn
       video.addEventListener("timeupdate", () => {
-        if (!frames && !video.paused && video.currentTime > 1) tile.classList.add("playing");
+        if (!frames && !video.paused && video.currentTime > showFrom + 1) tile.classList.add("playing");
       });
     } else video.addEventListener("timeupdate", () => onPicture(video.currentTime));
 
