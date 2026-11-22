@@ -282,6 +282,13 @@ if (hero) {
       if (video.currentTime < LOOP_START - 1) toLoopStart();
       const gestures = ["touchend", "click", "keydown"];
       const go = () => {
+        // a video that failed to load (network gone) plays only after a
+        // reload, which rewinds it: put it back on the end still's frame, or
+        // the blurred first frame flashes before the loop
+        if (video.error) {
+          video.load();
+          toLoopStart();
+        }
         video.play().then(() => {
           playing = true;
           gestures.forEach((t) => removeEventListener(t, go));
