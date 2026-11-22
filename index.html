@@ -22,7 +22,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=b1b4710e21">
 <script>document.documentElement.classList.add("js", "loading")</script>
 <link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/style.css?v=143501dace">
+<link rel="stylesheet" href="assets/style.css?v=b1bfef44be">
 <script>
   // show the page only once its typeface is ready, so text never reflows
   // from a fallback font after first paint (capped so a slow network still renders)
@@ -33,7 +33,7 @@
     setTimeout(done, 1500);
   })();
 </script>
-<script src="assets/main.js?v=5ee48be3dd" defer></script>
+<script src="assets/main.js?v=d17cda140f" defer onerror="document.documentElement.classList.remove('js')"></script>
 </head>
 <body>
 <header class="nav">
@@ -77,13 +77,8 @@
       </ul>
     </div>
     <div class="hero-tile">
-      <img class="v-img v-still" src="assets/hero-first.jpg?v=059ef26a84" alt="" aria-hidden="true">
-      <video class="v-loop" muted playsinline loop preload="auto" aria-hidden="true">
-        <source src="assets/hero-loop.mp4?v=b63901d0e7" type="video/mp4">
-      </video>
-      <video class="v-intro" muted playsinline preload="auto" poster="assets/hero-first.jpg?v=059ef26a84" data-still="assets/hero-last.jpg?v=0dd052b90c" aria-hidden="true">
-        <source src="assets/hero.mp4?v=f52774efad" type="video/mp4">
-      </video>
+      <img class="v-img v-still" src="assets/hero-first.jpg?v=d967df9929" alt="" aria-hidden="true">
+      <video class="v-intro" muted playsinline preload="auto" poster="assets/hero-first.jpg?v=d967df9929" data-still="assets/hero-last.jpg?v=49767811b9" data-img-intro="assets/hero-img-intro.mp4?v=2715044fa5" data-img-loop="assets/hero-img-loop.mp4?v=dc4d8147ec" aria-hidden="true" src="assets/hero-full.mp4?v=5535df775d"></video>
     </div>
   </section>
 

@@ -132,7 +132,6 @@ document.querySelectorAll("[data-year]").forEach((el) => (el.textContent = new D
 const hero = document.querySelector(".hero");
 if (hero) {
   const video = hero.querySelector(".v-intro");
-  const loop = hero.querySelector(".v-loop");
   const tile = hero.querySelector(".hero-tile");
   // phones: Safari colours its bars from the body's background, which is black
   // while the hero is in view (style.css round 22); once the hero has scrolled
@@ -210,7 +209,13 @@ if (hero) {
   }
 
   const still = tile.querySelector(".v-still");
-  const showStill = () => (still.src = video.dataset.still);
+  // swapped in only once decoded: on a dead network a broken image would
+  // leave the tile black, so the first frame stays instead
+  const showStill = () => {
+    const img = new Image();
+    img.src = video.dataset.still;
+    img.decode().then(() => (still.src = img.src), () => {});
+  };
 
   if (reduced) {
     video.removeAttribute("autoplay");
@@ -223,194 +228,80 @@ if (hero) {
     roleText.classList.add("live");
     hero.classList.add("ready", "settled");
   } else {
-    // the intro pulls focus once; the loop starts on its exact last frame and
-    // keeps breathing between soft and sharper, so the hero never freezes
-    // the loop file runs at the calm pace (15 s per cycle); the first cycle
-    // plays at a medium 12 s pace, then eases down once the visitor stays
-    const FIRST_RATE = 15 / 12;
-    // a few small steps rather than one per frame: each rate change goes to
-    // the platform's video player, and hundreds of them can make it hitch
-    const easeLoopDown = () => {
-      const t0 = performance.now();
-      const step = setInterval(() => {
-        const p = Math.min(1, (performance.now() - t0) / 5000);
-        loop.playbackRate = FIRST_RATE + (1 - FIRST_RATE) * (1 - Math.pow(1 - p, 3));
-        if (p === 1) clearInterval(step);
-      }, 250);
+    // one file (hero-full.mp4): the intro pulls focus once and eases to rest
+    // on the loop's first frame at LOOP_START (a keyframe); from there the
+    // 15 s loop repeats, each wrap a seek back to LOOP_START, which costs what
+    // the loop attribute did. One element and one play(): no priming, no
+    // handover between two videos, no playbackRate changes (each one can
+    // stall the iPhone's player). Regenerate with the media script; if the
+    // file changes, update LOOP_START
+    const LOOP_START = 6.04;
+    const hasRVFC = "requestVideoFrameCallback" in video;
+    const toLoopStart = () => (video.currentTime = LOOP_START);
+    // an ended video is paused, and play() would start it over from the intro
+    const replay = () => {
+      if (video.ended) toLoopStart();
+      return video.play();
     };
-    let lastT = 0;
-    const onWrap = () => {
-      if (loop.currentTime + 0.5 < lastT) {
-        loop.removeEventListener("timeupdate", onWrap);
-        easeLoopDown();
-      }
-      lastT = loop.currentTime;
+    video.addEventListener("ended", () => replay().catch(onRefused));
+    // the still covers the video until it has put a frame on screen while
+    // playing (iOS paints a not-yet-playing video black); no time cap: the
+    // still is the same picture, so waiting longer costs nothing.
+    // The wrap rides on the frames too: one frame early, so the seek's
+    // latency hides under a frame at rest
+    // the currentTime check keeps a late callback for a frame from before the
+    // wrap from seeking again to where the video already is (freezes WebKit)
+    let frames = 0, rv = 0;
+    const onPicture = (t) => {
+      if (!video.paused) tile.classList.add("playing");
+      if (!video.seeking && video.currentTime > LOOP_START + 1 && t >= video.duration - (hasRVFC ? 0.1 : 0.35)) toLoopStart();
     };
-    // which video should be moving: the intro while it pulls focus, then the loop
-    let phase = "wait";
-    const current = () => (phase === "intro" ? video : phase === "loop" ? loop : null);
-    // resolves once a video has put a frame on screen, so nothing above it
-    // fades away while it is still black; capped, so a callback the browser
-    // never sends cannot hold the hero
-    const firstFrame = (v) => Promise.race([
-      new Promise((resolve) => {
-        if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => resolve());
-        else v.addEventListener("timeupdate", resolve, { once: true });
-      }),
-      wait(600),
-    ]);
-    // WebKit (Safari on the Mac) can stop delivering frames after a small seek
-    // (a fraction of a second, or to the position the video already holds):
-    // the clock runs on, but the picture stays put until a seek of half a
-    // second or more. So videos only ever seek by at least that much
-    const BIG_SEEK = 0.5;
-    const seekTo = (v, t) => {
-      if (Math.abs(v.currentTime - t) >= BIG_SEEK) v.currentTime = t;
+    const onFrame = (now, meta) => {
+      frames++;
+      onPicture(meta.mediaTime);
+      rv = video.requestVideoFrameCallback(onFrame);
     };
-    const startLoop = () => loop.play()
-      .then(() => firstFrame(loop))
-      .then(() => tile.classList.add("looping"));
-    const toLoop = () => {
-      if (phase === "loop") return;
-      phase = "loop";
-      seekTo(loop, 0);
-      loop.playbackRate = FIRST_RATE;
-      loop.addEventListener("timeupdate", onWrap);
-      startLoop().catch(() => {
-        // video refused and no image fallback: hold the sharp end frame and
-        // start the loop on the first tap, which is always allowed
-        showStill();
-        const gestures = ["touchend", "click", "keydown"];
-        const go = () => {
-          gestures.forEach((t) => removeEventListener(t, go));
-          startLoop().catch(console.error);
-        };
-        gestures.forEach((t) => addEventListener(t, go, { passive: true }));
+    if (hasRVFC) {
+      rv = video.requestVideoFrameCallback(onFrame);
+      // backup for a browser that never sends a frame callback: a clock that
+      // has run a second while playing means a picture is being drawn
+      video.addEventListener("timeupdate", () => {
+        if (!frames && !video.paused && video.currentTime > 1) tile.classList.add("playing");
       });
-    };
-    video.addEventListener("ended", toLoop);
+    } else video.addEventListener("timeupdate", () => onPicture(video.currentTime));
 
-    // self-healing: browsers pause or freeze video on their own (Safari's
-    // back/forward cache brings the page back with a frozen video; background
-    // tabs and power saving pause it), so once a second the video that should
-    // be moving is checked, and restarted if it is not
-    // when each video last put a frame on screen: a picture can freeze while
-    // the clock keeps running, which the clock alone cannot show
-    const shownAt = new Map(), shownTime = new Map(), shownCount = new Map();
-    const trackFrames = (v) => {
-      if (!v.requestVideoFrameCallback) return;
-      const onFrame = (now, meta) => {
-        shownAt.set(v, performance.now());
-        shownTime.set(v, meta.mediaTime);
-        shownCount.set(v, (shownCount.get(v) || 0) + 1);
-        v.requestVideoFrameCallback(onFrame);
+    // started, so the watchdog keeps it moving
+    let playing = false;
+    // video refused and no image fallback: hold the sharp end frame and start
+    // the loop on a tap, which is always allowed; the listeners stay until a
+    // start succeeds (a scroll's touchend is no user activation)
+    const tapToStart = () => {
+      showStill();
+      // positioned once, and only from far away: a small seek, or one to
+      // where it already is, can freeze it
+      if (video.currentTime < LOOP_START - 1) toLoopStart();
+      const gestures = ["touchend", "click", "keydown"];
+      const go = () => {
+        video.play().then(() => {
+          playing = true;
+          gestures.forEach((t) => removeEventListener(t, go));
+        }, () => {});
       };
-      v.requestVideoFrameCallback(onFrame);
+      gestures.forEach((t) => addEventListener(t, go, { passive: true }));
     };
-    trackFrames(video);
-    trackFrames(loop);
-    let lastSeen = -1, frozen = 0, watched = null, lastHeal = performance.now(), away = false, seekTicks = 0;
-    // grace for a video that just became the one to watch (or a page that
-    // just became visible again): it has not had the chance to draw yet
-    const rearm = () => {
-      watched = current();
-      if (watched) shownAt.set(watched, performance.now());
+    // refused after it had run (Low Power Mode switched on meanwhile): wait
+    // for a tap. A refusal while hidden may be temporary, so it is ignored
+    const onRefused = (e) => {
+      if (e.name !== "NotAllowedError" || !playing || document.hidden) return;
+      playing = false;
+      tapToStart();
     };
-    const unfreeze = (v) => {
-      const frozenAt = shownTime.get(v);
-      const to = frozenAt !== undefined && Math.abs(v.currentTime - frozenAt) >= BIG_SEEK ? frozenAt
-        : v.currentTime >= 1.5 ? v.currentTime - 1 : v.currentTime + 1;
-      if (v === loop) lastT = to;
-      v.currentTime = to;
-      shownAt.set(v, performance.now());
-    };
-    const heal = () => {
-      // a late tick means the page's main thread was busy: iOS kept drawing
-      // the video outside the page, but no frame callback could arrive, which
-      // must not read as a frozen picture (it seeked healthy videos backwards)
-      const late = performance.now() - lastHeal > 1500;
-      lastHeal = performance.now();
-      const v = current();
-      // the first tick back from a hidden page can run before its
-      // visibilitychange handler; it must not judge frames from before
-      if (document.hidden) away = true;
-      if (!v || document.hidden) return;
-      if (v !== watched || late || away) rearm();
-      away = false;
-      if (v === video && (video.ended || video.currentTime > video.duration - 0.1)) return toLoop();
-      const restart = () => (v === loop ? startLoop() : v.play()).catch(() => {});
-      if (v.paused) return restart();
-      // a pending seek holds the clock and the picture still; that is not a
-      // freeze, so nothing restarts the video meanwhile (iOS once took 13 s to
-      // land a seek while being restarted). The picture gets a fresh grace;
-      // a seek that has not landed after 5 s is left to the checks below
-      if (v.seeking && ++seekTicks <= 5) {
-        shownAt.set(v, performance.now());
-        frozen = 0;
-        lastSeen = v.currentTime;
-        return;
-      }
-      if (!v.seeking) seekTicks = 0;
-      // the clock runs but no frame has reached the screen for 1.5 s: a big
-      // seek wakes the picture (small ones do not). It goes back to the frame
-      // that froze when that is far enough away, so playback carries on from
-      // there; lastT is moved too, so the loop does not take it for its wrap
-      if (v.requestVideoFrameCallback && v.currentTime !== lastSeen && performance.now() - (shownAt.get(v) || 0) > 1500) unfreeze(v);
-      // a stopped clock counts only once the data is there: iOS reports a
-      // video still waiting for the network as able to play (readyState 3),
-      // and pausing and restarting it then only restarts the wait; one stuck
-      // there for 6 s is restarted anyway
-      if (v.readyState >= 3 && v.currentTime === lastSeen && ++frozen >= (v.readyState >= 4 ? 2 : 6)) {
-        frozen = 0;
-        v.pause();
-        restart();
-      } else if (v.currentTime !== lastSeen) frozen = 0;
-      lastSeen = v.currentTime;
-    };
-    setInterval(heal, 1000);
-    document.addEventListener("visibilitychange", () => {
-      rearm();
-      heal();
-    });
-    addEventListener("pageshow", (e) => {
-      const v = current();
-      if (!e.persisted || !v) return;
-      rearm();
-      v.pause();
-      (v === loop ? startLoop() : v.play()).catch(() => {});
-      // WebKit often brings the picture back frozen, sometimes after drawing
-      // a single frame; about 25 frames are due in the first 800 ms, so far
-      // fewer means frozen, and it is fixed then rather than by the watchdog
-      const before = shownCount.get(v) || 0;
-      setTimeout(() => {
-        if (v.requestVideoFrameCallback && current() === v && !v.paused && (shownCount.get(v) || 0) - before < 5) unfreeze(v);
-      }, 800);
-    });
-
-    // phones never preload video, so a muted play-and-pause fetches the files
-    // while the name types; otherwise the intro would start late and the
-    // picture would stop at the handover while the loop downloads. It starts
-    // only after the page has painted (iOS holds the first paint while a video
-    // starts), intro first. A refusal (an iPhone in Low Power Mode) is known
-    // long before it matters
-    // no rewind afterwards: the playhead moves a few hundredths of a second at
-    // most, where the picture is at rest, and a small seek could freeze it
-    // the pause waits for a drawn frame: paused right as it reports playing,
-    // WebKit on iOS can leave the video unable to start again (the loop then
-    // reported playing at the handover but held its first frame for 2.5 s)
-    const prime = (v) => v.play().then(() => firstFrame(v)).then(() => {
-      // a real start may have come first; only pause a video still waiting
-      if (v !== current()) v.pause();
-    });
-    let painted;
-    const canPlay = new Promise((resolve) => (painted = resolve))
-      .then(() => prime(video))
-      .then(() => true, () => false);
-    canPlay.then((ok) => ok && prime(loop)).catch(() => {});
 
     // Low Power Mode refuses every video, but Safari also plays an mp4 inside
     // <img> like an animated image, which no autoplay rule covers; the intro
-    // runs once that way, then the loop takes over on its last frame
+    // runs once that way, then the loop takes over on its last frame. The
+    // loop file loads only after the intro, so it never takes its bandwidth
+    const INTRO_MS = 6080; // motion length of data-img-intro (the file holds its end frame 1 s longer)
     const loadImg = async (src) => {
       const img = new Image();
       img.className = "v-img";
@@ -421,13 +312,6 @@ if (hero) {
       await img.decode();
       return img;
     };
-    const asImage = (v) => canPlay.then((ok) => (ok ? null : loadImg(v.querySelector("source").src)));
-    const introImg = asImage(video);
-    const loopImg = asImage(loop);
-    // where mp4 cannot be an image, the refusal is handled by toLoop below;
-    // these keep the unused attempts from reporting as unhandled errors
-    introImg.catch(() => {});
-    loopImg.catch(() => {});
     // a new image starts its slow zoom from the beginning; match the still's
     const show = (img) => {
       tile.appendChild(img);
@@ -436,29 +320,116 @@ if (hero) {
       if (ref && own) own.currentTime = ref.currentTime;
     };
     const playAsImages = async () => {
-      const intro = await introImg;
+      const intro = await loadImg(video.dataset.imgIntro);
       show(intro);
-      // swap just before the intro (6.08 s) ends: a late swap would flash its first,
-      // blurred frame again as the image repeats
-      const [next] = await Promise.all([loopImg, wait(6080 - 70)]);
-      show(next);
+      // underneath the intro: its end frame, which holds if the loop is late
+      showStill();
+      const next = loadImg(video.dataset.imgLoop);
+      next.catch(() => {});
+      // an <img> mp4 repeats: swap just before the intro's motion ends; the
+      // file holds its last frame 1 s longer, so a late timer still lands on
+      // it, and if the loop is not there by then, take the intro away rather
+      // than let it start over on its blurred first frame
+      await wait(INTRO_MS - 70);
+      const end = setTimeout(() => intro.remove(), 800);
+      show(await next);
+      clearTimeout(end);
       // the intro stays underneath until the loop has surely painted
       setTimeout(() => intro.remove(), 300);
     };
-    const startIntro = async () => {
-      // preloading normally settles within a moment; never hold the intro on it
-      const ok = await Promise.race([canPlay, wait(600).then(() => null)]);
-      if (ok === false) return playAsImages();
-      phase = "intro";
-      try {
-        await video.play();
-      } catch {
-        phase = "wait";
-        return playAsImages();
-      }
-      await firstFrame(video);
-      tile.classList.add("playing");
+    const start = () => {
+      playing = true;
+      video.play().catch((e) => {
+        // a pause (Back) aborted it: no refusal, the watchdog starts it again
+        if (e.name === "AbortError") return;
+        playing = false;
+        if (e.name === "NotAllowedError") return playAsImages().catch(tapToStart);
+        tapToStart();
+      });
     };
+
+    // self-healing, once a second: browsers pause video on their own (back/
+    // forward cache, background tabs, power saving), and WebKit can freeze
+    // the picture (clock runs, nothing drawn) or the clock. One repair per
+    // freeze, cleared by the next drawn frame. Nothing is judged on a late
+    // tick (busy main thread: frame callbacks could not run), while hidden,
+    // off screen or seeking, nor on the first tick after any of those
+    // after a repair that drew nothing, the next one waits 8 judged ticks
+    let lastHeal = performance.now(), lastT = -1, lastFrames = 0, stuck = 0, seekTicks = 0, repaired = 0, kicked = false;
+    const repair = (clockRan) => {
+      repaired = 8;
+      stuck = 0;
+      const t = video.currentTime;
+      // a big seek wakes a frozen picture (small ones do not); a stopped
+      // clock needs a real restart
+      if (clockRan) video.currentTime = t >= LOOP_START + 1 ? t - 1 : t + 1;
+      else {
+        video.pause();
+        video.play().catch(() => {});
+      }
+    };
+    const heal = () => {
+      const late = performance.now() - lastHeal > 1500;
+      lastHeal = performance.now();
+      if (!video.seeking) seekTicks = 0;
+      // a seek that has not landed after 5 s is judged like anything else
+      // (iOS once took 13 s to land one)
+      if (!playing || late || document.hidden || !heroInView || (video.seeking && ++seekTicks <= 5)) {
+        lastT = -1;
+        return;
+      }
+      if (video.paused) return void replay().catch(onRefused);
+      const t = video.currentTime, prev = lastT, ran = prev >= 0 && t - prev > 0.5;
+      // until a first frame callback arrives, frames are judged by the clock
+      const drew = hasRVFC && frames ? frames !== lastFrames : ran;
+      lastT = t;
+      lastFrames = frames;
+      if (drew) {
+        repaired = 0;
+        stuck = 0;
+        kicked = false;
+        return;
+      }
+      if (prev < 0 || (repaired && --repaired)) return;
+      // the clock ran a real stretch, but no frame reached the screen (a
+      // stall that just resumed moves the clock only a little). The callback
+      // chain itself can stall, so it is renewed first; a seek follows only
+      // if the next tick still sees no frame
+      if (ran) {
+        if (kicked) return repair(true);
+        kicked = true;
+        video.cancelVideoFrameCallback(rv);
+        rv = video.requestVideoFrameCallback(onFrame);
+        return;
+      }
+      // a stopped clock counts only once the data is there: iOS reports a
+      // video still waiting for the network as able to play (readyState 3),
+      // and a restart then only restarts the wait; one stuck there for 6 s
+      // is restarted anyway
+      if (t === prev && video.readyState >= 3 && ++stuck >= (video.readyState >= 4 ? 2 : 6)) repair(false);
+      else if (t !== prev) stuck = 0;
+    };
+    setInterval(heal, 1000);
+    // a hide shorter than a tick must not count frames from before it
+    document.addEventListener("visibilitychange", () => {
+      lastT = -1;
+      if (!document.hidden && playing && video.paused) replay().catch(onRefused);
+    });
+    // Back: WebKit can bring the page back with a frozen picture or clock,
+    // sometimes after drawing one frame; about 20 frames are due in 800 ms.
+    // Only a frozen picture with a running clock and the data there is
+    // repaired here, and only by a seek (a restart would just restart a
+    // network wait); everything else is left to the watchdog
+    addEventListener("pageshow", (e) => {
+      if (!e.persisted || !playing) return;
+      lastT = -1;
+      replay().catch(onRefused);
+      const t0 = video.currentTime, n = frames;
+      setTimeout(() => {
+        if (hasRVFC && heroInView && !document.hidden && !video.paused && !video.seeking && !repaired &&
+            video.readyState >= 3 && frames - n < 5 && video.currentTime - t0 > 0.4) repair(true);
+      }, 800);
+    });
 
     // slight parallax: the video drifts against the pointer
     // the loop only runs while the pointer moves or the video is settling back,
@@ -473,6 +444,8 @@ if (hero) {
     };
     const kick = () => { if (!raf) raf = requestAnimationFrame(drift); };
     tile.addEventListener("pointermove", (e) => {
+      // mouse only: a touch that starts a scroll must not nudge the video
+      if (e.pointerType !== "mouse") return;
       const r = tile.getBoundingClientRect();
       tx = ((e.clientX - r.left) / r.width - 0.5) * -18;
       ty = ((e.clientY - r.top) / r.height - 0.5) * -14;
@@ -510,14 +483,24 @@ if (hero) {
       roleText.textContent = shownRole;
       role.style.minHeight = `${tallest}px`;
     };
-    document.fonts.ready.then(visible).then(async () => {
+    // capped like the head script's font gate, so a slow font cannot hold the hero
+    Promise.race([document.fonts.ready, wait(1500)]).then(visible).then(async () => {
       reserveRole();
-      addEventListener("resize", reserveRole);
+      // again once the font is in (the gate above may not have waited for it),
+      // and on resize only when the width changed (iOS resizes on scroll)
+      document.fonts.ready.then(reserveRole);
+      let roleWidth = innerWidth;
+      addEventListener("resize", () => {
+        if (innerWidth === roleWidth) return;
+        roleWidth = innerWidth;
+        reserveRole();
+      });
       hero.classList.add("tile-in");
-      requestAnimationFrame(() => requestAnimationFrame(painted));
+      // the focus pull starts at the first paint (iOS holds the paint while a
+      // video starts), so the file loads while the tile fades in and the
+      // picture is moving when the typing starts
+      requestAnimationFrame(() => requestAnimationFrame(start));
       await wait(700);
-      // the focus pull starts with the typing, so the picture never stands still
-      startIntro().catch(toLoop);
       await typeName();
       await wait(250);
       roleCaret.style.opacity = "1";

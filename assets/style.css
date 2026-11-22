@@ -153,8 +153,6 @@ h1, h2, h3 { text-wrap: balance; }
   scale: 1.06;
   animation: tile-drift 18s var(--ease-in-out) infinite alternate;
 }
-.hero-tile .v-intro { z-index: 1; transition: opacity 700ms var(--ease-out); }
-.hero-tile.looping .v-intro { opacity: 0; }
 @keyframes tile-drift { from { scale: 1.06; } to { scale: 1.12; } }
 
 .name {
@@ -789,7 +787,7 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
    themselves stay visible, since WebKit stops updating a video that starts
    playing while hidden */
 .hero-tile .v-still { transition: opacity 300ms var(--ease-out); }
-.hero-tile.playing .v-still, .hero-tile.looping .v-still { opacity: 0; }
+.hero-tile.playing .v-still { opacity: 0; }
 
 /* ---------- round 19: reveals the GPU can run ---------- */
 /* the wipe used to animate clip-path, which repaints the whole picture every
@@ -806,8 +804,7 @@ html:not(.loading) body { animation: page-in 500ms var(--ease-out) backwards; }
 .js [data-in="wipe"].in::after { transform: scaleY(0); visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .js [data-in="wipe"]::after { content: none; } }
 /* layers that have faded out stop being composited for the rest of the visit */
-.hero-tile.playing .v-still, .hero-tile.looping .v-still { visibility: hidden; transition: opacity 300ms var(--ease-out), visibility 0s 300ms; }
-.hero-tile.looping .v-intro { visibility: hidden; transition: opacity 700ms var(--ease-out), visibility 0s 700ms; }
+.hero-tile.playing .v-still { visibility: hidden; transition: opacity 300ms var(--ease-out), visibility 0s 300ms; }
 
 /* ---------- round 20: review fixes ---------- */
 /* text for screen readers only, beside a visual effect that hides it */
