@@ -251,9 +251,11 @@ if (hero) {
     // latency hides under a frame at rest
     // the currentTime check keeps a late callback for a frame from before the
     // wrap from seeking again to where the video already is (freezes WebKit)
-    let frames = 0, rv = 0;
+    // showFrom: the still hides only for a frame at or after it (the tap path
+    // shows the end still, so frames from before the loop must stay under it)
+    let frames = 0, rv = 0, showFrom = 0;
     const onPicture = (t) => {
-      if (!video.paused) tile.classList.add("playing");
+      if (!video.paused && t >= showFrom) tile.classList.add("playing");
       if (!video.seeking && video.currentTime > LOOP_START + 1 && t >= video.duration - (hasRVFC ? 0.1 : 0.35)) toLoopStart();
     };
     const onFrame = (now, meta) => {
@@ -276,6 +278,7 @@ if (hero) {
     // the loop on a tap, which is always allowed; the listeners stay until a
     // start succeeds (a scroll's touchend is no user activation)
     const tapToStart = () => {
+      showFrom = LOOP_START - 0.1;
       showStill();
       // positioned once, and only from far away: a small seek, or one to
       // where it already is, can freeze it
@@ -283,9 +286,10 @@ if (hero) {
       const gestures = ["touchend", "click", "keydown"];
       const go = () => {
         // a video that failed to load (network gone) plays only after a
-        // reload, which rewinds it: put it back on the end still's frame, or
-        // the blurred first frame flashes before the loop
+        // reload, which rewinds it and paints black: the end still stays up
+        // (showFrom) until the loop's first frame is drawn
         if (video.error) {
+          tile.classList.remove("playing");
           video.load();
           toLoopStart();
         }
