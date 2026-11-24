@@ -228,14 +228,24 @@ if (hero) {
     roleText.classList.add("live");
     hero.classList.add("ready", "settled");
   } else {
-    // one file (hero-full.mp4): the intro pulls focus once and eases to rest
-    // on the loop's first frame at LOOP_START (a keyframe); from there the
-    // 15 s loop repeats, each wrap a seek back to LOOP_START, which costs what
+    // one file (hero-v2.mp4): the intro pulls focus once and runs into the
+    // loop's first frame at LOOP_START (a keyframe); from there the 11.6 s
+    // loop repeats, each wrap a seek back to LOOP_START, which costs what
     // the loop attribute did. One element and one play(): no priming, no
     // handover between two videos, no playbackRate changes (each one can
     // stall the iPhone's player). Regenerate with the media script; if the
-    // file changes, update LOOP_START
-    const LOOP_START = 6.04;
+    // file changes, update LOOP_START and INTRO_MS
+    const LOOP_START = 4.4;
+    // portrait phone tiles show only the centre of the wide picture: a
+    // centre-cropped file with the same frames and keyframes is about 20 %
+    // smaller (iOS buffers the whole file before the first frame). Picked
+    // before the first play() (iOS never preloads, so the swap costs nothing)
+    // and only while the tile is no wider than that crop, so the framing is
+    // exactly the wide file's. src stays on the element (never <source>)
+    const PHONE_ASPECT = 1.06;
+    const r = tile.getBoundingClientRect();
+    if (video.dataset.phone && matchMedia("(max-width: 860px), (pointer: coarse)").matches &&
+        r.height > 0 && r.width / r.height <= PHONE_ASPECT) video.src = video.dataset.phone;
     const hasRVFC = "requestVideoFrameCallback" in video;
     const toLoopStart = () => (video.currentTime = LOOP_START);
     // an ended video is paused, and play() would start it over from the intro
@@ -247,8 +257,9 @@ if (hero) {
     // the still covers the video until it has put a frame on screen while
     // playing (iOS paints a not-yet-playing video black); no time cap: the
     // still is the same picture, so waiting longer costs nothing.
-    // The wrap rides on the frames too: one frame early, so the seek's
-    // latency hides under a frame at rest
+    // The wrap rides on the frames too: on the last frame (dissolved into
+    // the loop's first frame), so the seek's latency hides under the same
+    // picture; one frame earlier the seam is a visible step
     // the currentTime check keeps a late callback for a frame from before the
     // wrap from seeking again to where the video already is (freezes WebKit)
     // showFrom: the still hides only for a frame at or after it (the tap path
@@ -256,7 +267,7 @@ if (hero) {
     let frames = 0, rv = 0, showFrom = 0;
     const onPicture = (t) => {
       if (!video.paused && t >= showFrom) tile.classList.add("playing");
-      if (!video.seeking && video.currentTime > LOOP_START + 1 && t >= video.duration - (hasRVFC ? 0.1 : 0.35)) toLoopStart();
+      if (!video.seeking && video.currentTime > LOOP_START + 1 && t >= video.duration - (hasRVFC ? 1.5 / 30 : 0.35)) toLoopStart();
     };
     const onFrame = (now, meta) => {
       frames++;
@@ -271,18 +282,38 @@ if (hero) {
         if (!frames && !video.paused && video.currentTime > showFrom + 1) tile.classList.add("playing");
       });
     } else video.addEventListener("timeupdate", () => onPicture(video.currentTime));
+    // a reset element (load(), or WebKit discarding the media) paints black:
+    // the still covers it again until a new frame is drawn; frames restarts
+    // at 0 so the timeupdate backup counts again if the callbacks are lost
+    video.addEventListener("emptied", () => {
+      tile.classList.remove("playing");
+      frames = 0;
+    });
 
     // started, so the watchdog keeps it moving
     let playing = false;
     // video refused and no image fallback: hold the sharp end frame and start
     // the loop on a tap, which is always allowed; the listeners stay until a
-    // start succeeds (a scroll's touchend is no user activation)
+    // start succeeds (a scroll's touchend is no user activation); armed keeps
+    // a second call (error and refusal together) from adding them twice
+    let armed = false;
     const tapToStart = () => {
+      if (armed) return;
+      armed = true;
       showFrom = LOOP_START - 0.1;
       showStill();
       // positioned once, and only from far away: a small seek, or one to
       // where it already is, can freeze it
-      if (video.currentTime < LOOP_START - 1) toLoopStart();
+      // iOS loads nothing for a refused video: a seek set now stays pending
+      // forever (seeking stays true, play() never resolves, the intro plays
+      // hidden under the still and the video freezes on its last frame), so
+      // the seek waits until there is data
+      const toLoopWhenReady = () => {
+        if (video.readyState >= 3) {
+          if (video.currentTime < LOOP_START - 1) toLoopStart();
+        } else video.addEventListener("canplay", toLoopWhenReady, { once: true });
+      };
+      toLoopWhenReady();
       const gestures = ["touchend", "click", "keydown"];
       const go = () => {
         // a video that failed to load (network gone) plays only after a
@@ -291,10 +322,11 @@ if (hero) {
         if (video.error) {
           tile.classList.remove("playing");
           video.load();
-          toLoopStart();
+          toLoopWhenReady();
         }
         video.play().then(() => {
           playing = true;
+          armed = false;
           gestures.forEach((t) => removeEventListener(t, go));
         }, () => {});
       };
@@ -307,12 +339,19 @@ if (hero) {
       playing = false;
       tapToStart();
     };
+    // a download that dies after playback started (network dropped) is not
+    // retried: hold the end still and reload on a tap (tapToStart's error path)
+    video.addEventListener("error", () => {
+      if (!playing) return;
+      playing = false;
+      tapToStart();
+    });
 
     // Low Power Mode refuses every video, but Safari also plays an mp4 inside
     // <img> like an animated image, which no autoplay rule covers; the intro
     // runs once that way, then the loop takes over on its last frame. The
     // loop file loads only after the intro, so it never takes its bandwidth
-    const INTRO_MS = 6080; // motion length of data-img-intro (the file holds its end frame 1 s longer)
+    const INTRO_MS = 4400; // motion length of data-img-intro (the file holds its end frame 1 s longer)
     const loadImg = async (src) => {
       const img = new Image();
       img.className = "v-img";
